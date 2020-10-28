@@ -1,5 +1,9 @@
 # external modules
 import socket
+import sys
+import time
+import serial
+import os
 
 # internal modules
 import sys
@@ -22,10 +26,11 @@ class Rover:
                 - calls listen()
         """
         try:
+            self.bluetooth_port = serial.Serial('/dev/rfcomm0',9600)
             self.rover_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # self.rover_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.rover_socket.connect((ip,port))
-            NetworkHandler().send('Hi !',self.rover_socket)
+            # NetworkHandler().send('Hi !',self.rover_socket)
             self.handle_incoming_messages()
         finally:
             self.cleanUp()
@@ -38,6 +43,9 @@ class Rover:
             message = NetworkHandler().receive(self.rover_socket)
             if message:
                 print(message)
+                # self.bluetooth_port.write(message)
+                # s.write(b'w')
+                # s.write(b' ')
             else:
                 return
 
@@ -48,20 +56,9 @@ class Rover:
         print("Cleaning Up")
         if self.rover_socket is not None:
             self.rover_socket.close()
+        if self.bluetooth_port is not None:
+            self.bluetooth_port.close()
 
 rover = Rover()
 rover.start()
 
-# import sys
-# import time
-# import serial
-# import os
-# s = serial.Serial('/dev/rfcomm0',9600)
-# print("writing")
-# for i in range(5):
-#     s.write(b'w')
-#     time.sleep(0.5)
-#     s.write(b' ')
-#     time.sleep(0.5)
-# s.close()
-# print("done")

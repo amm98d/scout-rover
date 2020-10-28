@@ -2,6 +2,8 @@
 import socket
 import threading
 from time import sleep
+import os
+from platform import platform
 
 # internal modules
 import sys
@@ -33,14 +35,10 @@ class Server:
             self.connection, self.client_address = self.server_socket.accept()
             self.messagesListenerThread = threading.Thread(target=self.handle_incoming_messages)
             self.messagesListenerThread.start()
-            for i in range(5):
-                abc = "hi, I'm server"+str(i)
-                NetworkHandler().send(abc,self.connection)
-                sleep(0.1)
+            self.mainMenuThread = threading.Thread(target=self.mainMenu)
+            self.mainMenuThread.start()
+            self.mainMenuThread.join()
             self.messagesListenerThread.join()
-            # self.mainMenuThread = threading.Thread(target=self.mainMenu)
-            # self.mainMenuThread.start()
-            # self.mainMenuThread.join()
         finally:
             self.cleanUp()
 
@@ -55,9 +53,66 @@ class Server:
             else:
                 return
 
+    def clearScreen(self):
+        if platform() == "Windows":
+            os.system("cls")
+        elif platform() == "Linux-5.4.0-52-generic-x86_64-with-Ubuntu-18.04-bionic":
+            os.system('clear')
+
+    def drivingMode(self):
+        def get_raw_char():
+            ch = ''
+            if os.name == 'nt':
+                import msvcrt
+                ch = msvcrt.getch()
+            else:
+                import tty, termios, sys
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                try:
+                    tty.setraw(sys.stdin.fileno())
+                    ch = sys.stdin.read(3)
+                finally:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            return ch
+        self.clearScreen()
+        print("===================================================================")
+        print("                           Driving Mode                            ")
+        print("===================================================================")
+        print("Instructions:")
+        print("Use the arrow keys to drive the rover around. Press Esc Key to exit.")
+        print("-------------------------------------------------------------------")
+        while (True):
+            k = get_raw_char()
+            if k == "\x1b[A":
+                NetworkHandler().send(b'w',self.connection)
+                print("up")
+            elif k == '\x1b[B':
+                NetworkHandler().send(b's',self.connection)
+                print("down")
+            elif k == '\x1b[C':
+                NetworkHandler().send(b'd',self.connection)
+                print("right")
+            elif k == '\x1b[D':
+                NetworkHandler().send(b'a',self.connection)
+                print("left")
+            # if k == b'\x1b':
+            #     print("Esc")
+
     def mainMenu(self):
         while (True):
-            abc = input("CHOICE")
+            self.clearScreen()
+            print("=========================================")
+            print("                Main Menu                ")
+            print("=========================================")
+            print("1. Driving Mode.")
+            print("0. Exit.")
+            print("-----------------------------------------")
+            choice = input("Your Choice: ")
+            if (choice=="1"):
+                self.drivingMode()
+            elif (choice=="0"):
+                return
 
     def cleanUp(self):
         """
