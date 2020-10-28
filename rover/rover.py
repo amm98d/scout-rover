@@ -7,7 +7,7 @@ import os
 
 # internal modules
 import sys
-sys.path.append("../common/")
+sys.path.append("/etc/scout/scout-rover/common/")
 from MovementMessage import *
 from NetworkHandler import *
 
@@ -17,7 +17,7 @@ class Rover:
         externally.
     """
 
-    def start(self, ip='192.168.100.14', port=6909):
+    def start(self, ip='192.168.43.22', port=6909):
         """
             Kickstarts the rover.
             - Creates socket
@@ -43,7 +43,7 @@ class Rover:
             message = NetworkHandler().receive(self.rover_socket)
             if message:
                 print(message)
-                # self.bluetooth_port.write(message)
+                self.bluetooth_port.write(message)
                 # s.write(b'w')
                 # s.write(b' ')
             else:
