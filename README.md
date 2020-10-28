@@ -10,11 +10,11 @@ Each commit must have only atomic changes i.e. not more than 1 update. For examp
 The commit messages should follow the following pattern:
 ```
 [<TYPE>][<PLATFORM>] <DESCRIPTION>
-    |		|
-    |		|
+	|		|
+	|		|
 	|		------> [Server] | [Rover] | [Both]
 	|
-    ------> [Bug Fix] | [Feature] | [Refactor] | [Docs]
+	------> [Bug Fix] | [Feature] | [Refactor] | [Docs] 
 ```
 
 **TYPE:** Explain the general purpose
