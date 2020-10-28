@@ -9,9 +9,11 @@ Each commit must have only atomic changes i.e. not more than 1 update. For examp
 
 The commit messages should follow the following pattern:
 ```
-[<TYPE>] <DESCRIPTION>
-    |
-    |
+[<TYPE>][<PLATFORM>] <DESCRIPTION>
+    |		|
+    |		|
+	|		------> [Server] | [Rover] | [Both]
+	|
     ------> [Bug Fix] | [Feature] | [Refactor] | [Docs]
 ```
 
@@ -21,12 +23,17 @@ The commit messages should follow the following pattern:
   - Refactor
   - Docs
 
+**PLATFORM:** Whether the change is on the server side or rover side or both
+  - Server
+  - Rover
+  - Both
+
 **DESCRIPTION:** Explain the specific changes
 
 **Examples**
 ```
-[Bug Fix] Resolve INDEX OUT OF RANGE error in keypoints matching
-[Feature] Detect features in input video frame
-[Refactor] Code structured in main.java
-[Docs] Add docstring for myFunc()
+[Bug Fix][Server] Resolve INDEX OUT OF RANGE error in keypoints matching
+[Feature][Rover] Detect features in input video frame
+[Refactor][Both] Code structured in NetworkMessage.py
+[Docs][Server] Add docstring for myFunc()
 ```

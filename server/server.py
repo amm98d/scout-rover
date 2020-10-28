@@ -34,8 +34,8 @@ class Server:
             self.server_socket.listen(1)
             self.connection, self.client_address = self.server_socket.accept()
             self.messagesListenerThread = threading.Thread(target=self.handle_incoming_messages)
-            self.messagesListenerThread.start()
             self.mainMenuThread = threading.Thread(target=self.mainMenu)
+            self.messagesListenerThread.start()
             self.mainMenuThread.start()
             self.mainMenuThread.join()
             self.messagesListenerThread.join()
@@ -71,7 +71,7 @@ class Server:
                 old_settings = termios.tcgetattr(fd)
                 try:
                     tty.setraw(sys.stdin.fileno())
-                    ch = sys.stdin.read(3)
+                    ch = sys.stdin.read(1)
                 finally:
                     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
             return ch
@@ -84,20 +84,24 @@ class Server:
         print("-------------------------------------------------------------------")
         while (True):
             k = get_raw_char()
-            if k == "\x1b[A":
+            if ord(k) == 119:
                 NetworkHandler().send(b'w',self.connection)
                 print("up")
-            elif k == '\x1b[B':
+            elif ord(k) == 115:
                 NetworkHandler().send(b's',self.connection)
                 print("down")
-            elif k == '\x1b[C':
+            elif ord(k) == 100:
                 NetworkHandler().send(b'd',self.connection)
                 print("right")
-            elif k == '\x1b[D':
+            elif ord(k) == 97:
                 NetworkHandler().send(b'a',self.connection)
                 print("left")
-            # if k == b'\x1b':
-            #     print("Esc")
+            elif ord(k) == 32:
+                NetworkHandler().send(b' ',self.connection)
+                print('brakes')
+            elif ord(k) == 27:
+                print("Esc")
+                return
 
     def mainMenu(self):
         while (True):
