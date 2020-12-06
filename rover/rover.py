@@ -17,7 +17,7 @@ class Rover:
         externally.
     """
 
-    def start(self, ip='192.168.43.22', port=6909):
+    def start(self, ip='192.168.100.14', port=6909):
         """
             Kickstarts the rover.
             - Creates socket
@@ -30,6 +30,7 @@ class Rover:
             self.rover_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # self.rover_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.rover_socket.connect((ip,port))
+            print("sent the request")
             # NetworkHandler().send('Hi !',self.rover_socket)
             self.handle_incoming_messages()
         finally:
