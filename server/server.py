@@ -4,12 +4,15 @@ import threading
 from time import sleep
 import os
 from platform import platform
+import numpy as np
+import cv2
 
 # internal modules
 import sys
 sys.path.append("../common/")
 from MovementMessage import *
 from NetworkHandler import *
+from NumpySocket import NumpySocket
 
 class Server:
     """
@@ -33,14 +36,32 @@ class Server:
             self.server_socket.bind(('',port))
             self.server_socket.listen(1)
             self.connection, self.client_address = self.server_socket.accept()
+
             self.messagesListenerThread = threading.Thread(target=self.handle_incoming_messages)
+            self.receiveStreamThread = threading.Thread(target=self.receiveStream)
             self.mainMenuThread = threading.Thread(target=self.mainMenu)
+
             self.messagesListenerThread.start()
+            self.receiveStreamThread.start()
             self.mainMenuThread.start()
+
             self.mainMenuThread.join()
             self.messagesListenerThread.join()
+            self.receiveStreamThread.join()
         finally:
             self.cleanUp()
+
+    def receiveStream(self):
+        npSocket = NumpySocket()
+        npSocket.startClient(9999)
+        while True:
+            frame = npSocket.recieveNumpy()
+            print(len(frame))
+            #cv2.imshow("The display window" , frame)
+        try:
+            npSocket.endServer()
+        except OSError as err:
+            print("error",err)
 
     def handle_incoming_messages(self):
         """

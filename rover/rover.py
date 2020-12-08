@@ -4,12 +4,17 @@ import sys
 import time
 import serial
 import os
+import time
+import numpy as np
+from freenect import sync_get_depth as get_depth, sync_get_video as get_video
+import threading
 
 # internal modules
 import sys
 sys.path.append("/etc/scout/scout-rover/common/")
 from MovementMessage import *
 from NetworkHandler import *
+from NumpySocket import NumpySocket
 
 class Rover:
     """
@@ -28,13 +33,31 @@ class Rover:
         try:
             self.bluetooth_port = serial.Serial('/dev/rfcomm0',9600)
             self.rover_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # self.rover_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.rover_socket.connect((ip,port))
-            print("sent the request")
-            # NetworkHandler().send('Hi !',self.rover_socket)
-            self.handle_incoming_messages()
+
+            self.messagesListenerThread = threading.Thread(target=self.handle_incoming_messages)
+            self.sendStreamThread = threading.Thread(target=self.sendStream)
+
+            self.messagesListenerThread.start()
+            self.sendStreamThread.start()
+
+            self.messagesListenerThread.join()
+            self.sendStreamThread.join()
         finally:
             self.cleanUp()
+
+    def sendStream(self):
+        host_ip = '192.168.100.14'
+        npSocket = NumpySocket()
+        npSocket.startServer(host_ip, 9999)
+        while True:
+            frame, _ = get_video()
+            time.sleep(0.016)
+            npSocket.sendNumpy(frame)
+        try:
+            npSocket.endServer()
+        except OSError as err:
+            print("error")
 
     def handle_incoming_messages(self):
         """
@@ -45,8 +68,6 @@ class Rover:
             if message:
                 print(message)
                 self.bluetooth_port.write(message)
-                # s.write(b'w')
-                # s.write(b' ')
             else:
                 return
 
