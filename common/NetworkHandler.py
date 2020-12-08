@@ -13,7 +13,7 @@ class NetworkHandler:
                 message_object (object): any object-type can be sent
                 socket (Socket): socket for sending
         """
-        socket.sendall(pickle.dumps(message_object))
+        socket.sendall(pickle.dumps(message_object, protocol=2))
 
     def receive(self, socket):
         """
