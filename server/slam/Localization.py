@@ -61,28 +61,14 @@ class Localization:
         self.particles = [self.particles[i] for i in new_idexes]
         self.weights = np.full(self.num_particles, 1.0 / self.num_particles)
 
-    def plot_data(self, frameIdx=-1):
-        plt.cla()
-        poses = extract_poses(self.particles)
-        plot_poses(poses)
-        # Plot boundaries
-        plt.plot([0, 0], [0, 62])
-        plt.plot([62, 62], [0, 62])
-        plt.plot([0, 62], [0, 0])
-        plt.plot([0, 62], [62, 62])
-        plt.savefig(f"dataviz/frame{frameIdx}.png")
-        # plt.show()
-
-
-"""
-Flow of Events:
-    1. Generate Robot Pose
-    2. Generate Particle Filters
-    3. Make a Move
-    4. Estimate Motion (estimate_motionEM)
-    5. Sample Motion (sample_motion)
-    6. Detect Landmarks (sense_measurements)
-    7. Check measurment prob (measurement_prob)
-    8. Sample Particles
-    9. Repeat from Step 3
-"""
+    def plot_particles(self):
+        # x = [p.x for p in self.particles]
+        # y = [p.y for p in self.particles]
+        # weights = [w * 100 * self.num_particles for w in self.weights]
+        # plt.scatter(x, y, s=weights)
+        for pid, p in enumerate(self.particles):
+            x = p.x
+            y = p.y
+            t = p.theta
+            plt.plot(x, y, "bo", alpha=0.3)
+            plt.arrow(x, y, np.cos(t), np.sin(t))
