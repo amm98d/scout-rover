@@ -35,39 +35,29 @@ def calc_robot_pose(rmat, tvec, showAllDOF=False):
     return [round(x, 5), round(z, 5), round(thetaY, 5)]
 
 
-def extract_poses(particles):
-    """
-    From an array of robot objects (particles), this function extracts their poses and returns in the format [x, y, theta] for each particle in a list
-    """
-    poses = []
+# def extract_poses(particles):
+#     """
+#     From an array of robot objects (particles), this function extracts their poses and returns in the format [x, y, theta] for each particle in a list
+#     """
+#     poses = []
 
-    for particle in particles:
-        pose = [particle.x, particle.y, particle.theta]
-        poses.append(pose)
+#     for particle in particles:
+#         pose = [particle.x, particle.y, particle.theta]
+#         poses.append(pose)
 
-    return poses
+#     return poses
 
 
-def plot_poses(poses):
-    """
-    Creats a plot to visualize robot poses (positions and orientations)
-    """
-    poses = np.array(poses)
-
-    xPoints = poses[:, 0]
-    # yPoints = poses[:, 1]
-    xRange = max(xPoints) - min(xPoints)
-    # yRange = max(yPoints) - min(yPoints)
-
-    arrowXlen = xRange / 20
-    # arrowYlen = yRange / 10
-
-    for p in poses:
-        x = p[0]
-        y = p[1]
-        t = p[2]
-        plt.plot(x, y, "ro")
-        plt.arrow(x, y, arrowXlen * np.cos(t), arrowXlen * np.sin(t))
+def visualize_data(
+    viz_ftn, clean_start=True, showPlot=True, figName="", *args, **kwargs
+):
+    if clean_start:
+        plt.cla()
+    viz_ftn(*args)
+    if figName != "":
+        plt.savefig(f"dataviz/{figName}.png")
+    if showPlot:
+        plt.show()
 
 
 def visualize_trajectory(trajectory):
@@ -117,7 +107,7 @@ def visualize_trajectory(trajectory):
     plt.style.use("seaborn-whitegrid")
 
     # Plot the figure
-    fig = plt.figure(figsize=(8, 6), dpi=100)
+    # fig = plt.figure(figsize=(8, 6), dpi=100)
     gspec = gridspec.GridSpec(3, 3)
     ZY_plt = plt.subplot(gspec[0, 1:])
     YX_plt = plt.subplot(gspec[1:, 0])
@@ -197,4 +187,3 @@ def visualize_trajectory(trajectory):
     # plt.axis('equal')
     D3_plt.view_init(45, azim=30)
     plt.tight_layout()
-    # plt.savefig('dataviz/trajectory.png')
