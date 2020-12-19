@@ -23,8 +23,13 @@ class Localization:
             self.particles.append(r)
 
     def motion_update(self, odom_data):
-        for particle in self.particles:
-            particle.move(odom_data)
+        for pid, particle in enumerate(self.particles):
+            new_pose = particle.move(odom_data)
+            x, y, _ = new_pose
+
+            # Remove Particles that go outside the box
+            if x < 0 or x >= self.env_map.width or y < 0 or y >= self.env_map.height:
+                self.weights[pid] = 0
 
     def measurement_update(self, frame):
         # Detect Landmark
