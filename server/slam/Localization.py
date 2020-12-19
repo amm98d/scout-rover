@@ -38,20 +38,28 @@ class Localization:
         # If landmark exists
         if l_idx > -1:
             landmark = self.env_map.landmarks[l_idx]
-            # print(f"Landmark {l_idx}: ({landmark.x}, {landmark.y})")
+            print(f"=> Detected Landmark {l_idx} at ({landmark.x}, {landmark.y})")
             for i in range(self.num_particles):
-                self.weights[i] = self.particles[i].measurement_prob(landmark)
+                if self.weights[i] > 0:
+                    self.weights[i] = self.particles[i].measurement_prob(landmark)
 
         # Avoid all-zero weights
         if np.sum(self.weights) == 0:
-            self.weights = np.ones_like(self.weights)
-        self.weights /= np.sum(self.weights)
+            print("All particles are bad! Resampling...")
+            # self.weights = np.ones_like(self.weights)
+            self.generate_particles()
+        # else:
+        #     self.weights /= np.sum(self.weights)
 
     def sample_particles(self):
         # Resample according to importance weights
-        self.particles = np.random.choice(
-            self.particles, self.num_particles, True, self.weights
+        new_idexes = np.random.choice(
+            len(self.particles), len(self.particles), True, self.weights
         )
+
+        # Update new particles
+        self.particles = [self.particles[i] for i in new_idexes]
+        self.weights = np.full(self.num_particles, 1.0 / self.num_particles)
 
     def plot_data(self, frameIdx=-1):
         plt.cla()
