@@ -103,14 +103,14 @@ class Robot:
         landmark_range = np.sqrt(np.square(lx - rx) + np.square(ly - ry))
         landmark_bearing = np.arctan2(ly - ry, lx - rx) - rtheta
 
-        # print(landmark_range)
-        # print(landmark_bearing)
         # Add noise
         landmark_range = np.random.normal(landmark_range, self.alpha6)
         landmark_bearing = np.random.normal(landmark_bearing, self.alpha5)
 
         prob = landmark_range * landmark_bearing
         if prob < 0:
+            print(f"range: {landmark_range}, bearing: {landmark_bearing}")
+            print(prob)
             prob = prob * (-1)
 
         return prob
