@@ -60,14 +60,14 @@ class SLAM:
             self.tMats.append((rmat, tvec))
             new_trajectory = self.P[:3, 3]
             self.trajectory.append(new_trajectory)
-            self.poses.append(calc_robot_pose(P[:3, :3], P[:, 3]))
+            self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3]))
         else:
             prevRmat, prevTvec = self.tMats[-1]
             if not np.allclose(rmat, prevRmat) and not np.allclose(tvec, prevTvec):
                 self.tMats.append((rmat, tvec))
                 new_trajectory = self.P[:3, 3]
                 self.trajectory.append(new_trajectory)
-                self.poses.append(calc_robot_pose(P[:3, :3], P[:, 3]))
+                self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3]))
             else:
                 print("frame filtered...")
 
@@ -79,14 +79,14 @@ class SLAM:
         # self.particle_filter.sample_particles()
 
         # Part V. Save Visualization plot
-        visualize_data(env_map.plot_map, showPlot=False)
-        visualize_data(
-            particle_filter.plot_particles,
-            clean_start=False,
-            showPlot=False,
-            figName=f"frame{i}",
-        )
-        i += 1
+        # visualize_data(self.env_map.plot_map, showPlot=False)
+        # visualize_data(
+        #     self.particle_filter.plot_particles,
+        #     clean_start=False,
+        #     showPlot=False,
+        #     figName=f"frame{i}",
+        # )
+        # i += 1
 
         # plt.cla()
         # npTraj = np.array(self.trajectory).T
