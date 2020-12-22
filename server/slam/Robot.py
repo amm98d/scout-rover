@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
-from Odometry import extract_features
+from Odometry import *
+from utils import *
 
 
 class Robot:
@@ -13,13 +14,19 @@ class Robot:
 
         # Noises
         ## Motion noises
-        self.alpha1 = 0.0  # rotation
-        self.alpha2 = 0.0  # translation
-        self.alpha3 = 0.0  # translation
-        self.alpha4 = 0.0  # rotation
+        # self.alpha1 = 0.25  # rotation
+        # self.alpha2 = 0.175  # translation
+        # self.alpha3 = 0.175  # translation
+        # self.alpha4 = 0.27  # rotation
+        self.alpha1 = 0.2  # rotation
+        self.alpha2 = 0.03  # translation
+        self.alpha3 = 0.3  # translation
+        self.alpha4 = 0.2  # rotation
         ## Measurement noises
-        self.alpha5 = 0.0  # bearing
-        self.alpha6 = 0.0  # range
+        # self.alpha5 = 0.0  # bearing
+        self.alpha6 = 10  # range
+
+        self.fov = np.pi / 2
 
     def move(self, motion_control):
         """This function returns a pose in world coordinates by using internal odometry information and current pose of the robot.
@@ -61,56 +68,119 @@ class Robot:
 
         return final_pose
 
-    def measure(self, img1, landmarks):
+    def measure(self, img1, landmarks, kp1, img_des, iterator):
+        # Match features of landmark with img
         goodFeatures = []
-        kp2, des2 = extract_features(img1)
-        MIN_MATCH_COUNT = 10
-        for k in range(len(landmarks)):
-            FLANN_INDEX_LSH = 6
-            index_params = dict(algorithm=FLANN_INDEX_LSH, trees=5)
-            search_params = dict(checks=50)
-            flann = cv2.FlannBasedMatcher(index_params, search_params)
-            matches = flann.knnMatch(landmarks[k].des, des2, k=2)
-            # store all the good matches as per Lowe's ratio test.
-            good = []
-            for i, result in enumerate(matches):
-                if len(result) == 2:
-                    m, n = result
-                    if m.distance < 0.7 * n.distance:
-                        good.append(m)
-            if len(good) > MIN_MATCH_COUNT:
-                # Visualizing
-                goodFeatures.append((k, len(good)))
+        idx = -1
+        MIN_MATCH_COUNT = 10  ##HYPER-PARAMETER
+        # print("Len of landmark", len(landmarks))
 
-        if len(goodFeatures) == 0:
-            return -1
+        crop, height = applyTranformations(img1, str(iterator))
+        
+        
+    
+
+        if not isinstance(crop, int):
+
+            Nkp1, Ndes1 = extract_features(crop)
+            if len(Nkp1) <= 1:
+                return -1, -1
+
+            for k in range(len(landmarks)):
+                # printFrame(crop, "Detect landmark")
+                # print(len(Ndes1))
+                # print(landmarks[k].des)
+
+                good = match_features(landmarks[k].des, Ndes1)
+                good = filter_matches_distance(good, 0.7)  ##HYPER-PARAMETER
+
+        
+                if len(good) > MIN_MATCH_COUNT:
+                    goodFeatures.append((k, len(good)))
+
+            if len(goodFeatures) == 0:
+                idx = -1
+            else:
+                # print("GOOD Features tuple list", goodFeatures)
+                tmpI, tmpCount = 0, 0
+                for i, count in goodFeatures:
+                    if count > tmpCount:
+                        tmpI = i
+                        tmpCount = count
+                idx = tmpI
+
+            if idx != -1:
+                return idx, height
+            else:
+                return -1, -1
         else:
-            tmpI, tmpCount = 0, 0
-            for i, count in goodFeatures:
-                if count > tmpCount:
-                    tmpI = i
-                    tmpCount = count
-            return tmpI
+            return -1, -1
 
-    def measurement_prob(self, landmark):
-        lx = landmark.x
-        ly = landmark.y
+    def Gaussian(self, mu, sigma, x):
 
+        # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
+        # return np.exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / np.sqrt(2.0 * pi * (sigma ** 2))
+        return np.exp(-(np.square(mu - x) / np.square(sigma) / 2.0)) / np.sqrt(
+            2.0 * np.pi * np.square(sigma)
+        )
+
+    # def measurement_prob(self, landmark, l_dist):
+    #     lx = landmark.x
+    #     ly = landmark.y
+
+    #     rx = self.x
+    #     ry = self.y
+    #     rtheta = self.theta
+
+    #     landmark_range = np.sqrt(np.square(lx - rx) + np.square(ly - ry))
+    #     # landmark_bearing = np.arctan2(ly - ry, lx - rx) - rtheta
+
+    #     # Add noise
+    #     # landmark_range = np.random.normal(landmark_range, self.alpha6)
+    #     # landmark_bearing = np.random.normal(landmark_bearing, self.alpha5)
+
+    #     prob = self.Gaussian(landmark_range, self.alpha6, l_dist)
+
+    #     # prob = landmark_range * landmark_bearing
+    #     # if prob < 0:
+    #     #     print(f"range: {landmark_range}, bearing: {landmark_bearing}")
+    #     #     print(prob)
+    #     #     prob = prob * (-1)
+
+    #     return prob
+
+    def measurement_prob(self, landmarks, calc_dist):
+        # Rover Pose
         rx = self.x
         ry = self.y
         rtheta = self.theta
 
-        landmark_range = np.sqrt(np.square(lx - rx) + np.square(ly - ry))
-        landmark_bearing = np.arctan2(ly - ry, lx - rx) - rtheta
+        prob = 1.0
+        bearings = []
+        for landmark in landmarks:
+            lx = landmark.x
+            ly = landmark.y
 
-        # Add noise
-        landmark_range = np.random.normal(landmark_range, self.alpha6)
-        landmark_bearing = np.random.normal(landmark_bearing, self.alpha5)
+            landmark_bearing = np.arctan2(ly - ry, lx - rx) - rtheta
+            if landmark_bearing < 0:
+                landmark_bearing *= -1
+            if landmark_bearing < self.fov / 2:
+                bearings.append((landmark, landmark_bearing))
+            # print(f"\tBearing for {(lx,ly)}: {landmark_bearing}")
 
-        prob = landmark_range * landmark_bearing
-        if prob < 0:
-            print(f"range: {landmark_range}, bearing: {landmark_bearing}")
-            print(prob)
-            prob = prob * (-1)
+        if len(bearings) > 0:
+            closest = sorted(bearings, key=lambda x: x[1])[0]
+            lx, ly = closest[0].x, closest[0].y
+            # print(f"\tClosest: {(lx, ly)} -> {closest[1]}")
+            real_dist = np.sqrt(np.square(lx - rx) + np.square(ly - ry))
+            prob *= self.Gaussian(real_dist, self.alpha6, calc_dist)
 
-        return prob
+            return prob
+
+        return 0
+
+    def __repr__(self):
+        return f"({round(self.x, 2)}, {round(self.y, 2)}, {round(self.theta, 2)})"
+
+    def get_pose(self):
+        return [self.x, self.y, self.theta]

@@ -40,7 +40,6 @@ def match_features(des1, des2):
     search_params = dict(checks=50)  # or pass empty dictionary
 
     flann = cv2.FlannBasedMatcher(index_params, search_params)
-
     match = flann.knnMatch(des1, des2, k=2)
 
     return match
@@ -110,6 +109,9 @@ def estimate_motion(match, kp1, kp2, k):
         p2x, p2y = kp2[train_idx].pt
         image2_points.append([p2x, p2y])
 
+    if len(image2_points) < 5:
+        print(f"motion estimation: IMAGE POINTS LESS THAN 5")
+        return -1, -1, -1, -1
     E, mask = cv2.findEssentialMat(np.array(image1_points), np.array(image2_points), k)
 
     retval, rmat, tvec, mask = cv2.recoverPose(
@@ -134,6 +136,9 @@ def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_maps=[]):
         kp2 = kp_list[i + 1]
 
         rmat, tvec, image1_points, image2_points = estimate_motion(match, kp1, kp2, k)
+        if np.isscalar(rmat):
+            print("estimate trajectory: NO RMAT, TVEC")
+            return P, -1, -1
         rt_mtx = np.hstack([rmat, tvec])
         rt_mtx = np.vstack([rt_mtx, np.zeros([1, 4])])
         rt_mtx[-1, -1] = 1

@@ -5,44 +5,67 @@ from Localization import Localization
 from Odometry import *
 from utils import *
 import glob
+import multiprocessing
 
 
 class SLAM:
     def __init__(self):
         ## GLOBAL VARIABLES
         self.P = np.eye(4)  # Pose
+
+        # self.k = np.array(
+        #     [[640.0, 0, 640.0], [0, 480.0, 480.0], [0, 0, 1.0]], dtype=np.float32,
+        # )
+        # ahmed dataset
         self.k = np.array(
-            [[923.0, 0.0, 657.0], [0.0, 923.0, 657.0], [0.0000, 0.0000, 1.0000]],
+            [[827.0, 0.0, 638.0], [0.0, 826.0, 347], [0.0000, 0.0000, 1.0000]],
             dtype=np.float32,
         )
-        self.poses = [[0.0, 0.0, 0.0]]  # initial pose
-        self.trajectory = [np.array([0, 0, 0])]  # 3d trajectory
-        self.tMats = []  # Transformation Matrices (rmat, tvec)
 
-        ## CREATE MAP
+        self.poses = [[0.0, 0.0, np.pi / 2]]  # initial pose
+        self.trajectory = [np.array([0, 0, 0])]  # 3d trajectory
+        self.tMats = [
+            (np.zeros((3, 3)), np.zeros((3, 1)))
+        ]  # Transformation Matrices (rmat, tvec)
         self.env_map = Map(62, 62)
-        ##store landmarks
-        getLandmarks = True
-        if getLandmarks:
-            landmark_imgs = glob.glob("./train/*.jpg")
-            # 0->ecat
-            # 1->chemistry
-            # 2->physics
-            # 3->genis
-            crd = [(0, 0), (62, 0), (0, 62), (62, 62)]  # coordinates
-            i = 0
-            for img in landmark_imgs:
-                img = cv2.imread(img)
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                kp, des = extract_features(gray)
-                self.env_map.add_landmark(Landmark(crd[i][0], crd[i][1], kp, des))
-                i += 1
+        self._create_map(self.env_map)
         self.particle_filter = Localization(self.env_map)
 
-    def process(self, images):
+    def _create_map(self, env_map):
+        ##store landmarks
+        landmark_imgs = glob.glob("./train/*.jpg")
+        crd = [(0, 62), (62, 62)]  # coordinates
+        for idx, img in enumerate(landmark_imgs):
+            img = cv2.imread(img)
+
+            croppedImg, _ = applyTranformations(img)
+            # gray = cv2.cvtColor(croppedImg, cv2.COLOR_BGR2GRAY)
+            # print(croppedImg.shape)
+            kp, des = extract_features(croppedImg)
+            env_map.add_landmark(Landmark(crd[idx][0], crd[idx][1], kp, des, 12))
+
+    def process(self, images, iterator):
+        imgs_grey = [
+            cv2.cvtColor(images[0], cv2.COLOR_BGR2GRAY),
+            cv2.cvtColor(images[1], cv2.COLOR_BGR2GRAY),
+        ]
+
+        # Check if this frame should be dropped (blur/same)
+
+        if drop_frame(imgs_grey):
+            #print("Dropping the frame")
+            print("Sharpening the frame")
+            fm = cv2.Laplacian(imgs_grey[1], cv2.CV_64F).var()
+            if fm < 40:
+                kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+                im = cv2.filter2D(imgs_grey[1], -1, kernel)  ##sharp
+                imgs_grey[1] = im
+
+            
+
         # Part I. Features Extraction
         kp_list, des_list = extract_features_dataset(
-            images, extract_features_function=extract_features
+            imgs_grey, extract_features_function=extract_features
         )
 
         # Part II. Feature Matching
@@ -52,43 +75,59 @@ class SLAM:
             filtered_matches = filter_matches_dataset(filter_matches_distance, matches)
             matches = filtered_matches
 
+        ##Removing Same frames
+        smatches = sorted(matches[0], key=lambda x: x.distance)
+        sdiff = sum([x.distance for x in smatches[:500]])
+        if sdiff < 1000:
+            print(f"\t->->Frame Filtered because isSame: {sdiff}")
+            return
+
         # Part III. Trajectory Estimation
         self.P, rmat, tvec = estimate_trajectory(
             estimate_motion, matches, kp_list, self.k, self.P
         )
-        if len(self.tMats) == 0:
-            self.tMats.append((rmat, tvec))
-            new_trajectory = self.P[:3, 3]
-            self.trajectory.append(new_trajectory)
-            self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3]))
-        else:
-            prevRmat, prevTvec = self.tMats[-1]
-            if not np.allclose(rmat, prevRmat) and not np.allclose(tvec, prevTvec):
-                self.tMats.append((rmat, tvec))
-                new_trajectory = self.P[:3, 3]
-                self.trajectory.append(new_trajectory)
-                self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3]))
-            else:
-                print("frame filtered...")
+        # No motion estimation
+        if np.isscalar(rmat):
+            return
+        # Compare same frame
+        # prevRmat, prevTvec = self.tMats[-1]
+        # if not np.allclose(rmat, prevRmat) and not np.allclose(tvec, prevTvec):
+        self.tMats.append((rmat, tvec))
+        new_trajectory = self.P[:3, 3]
+        self.trajectory.append(new_trajectory * 2.95)
+        self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3] * 2.95))
+        # else:
+        #     print(f"\t->Frame Filtered because same TMat")
+        #     return
 
         # Part IV. Localize
-        # last_pose = self.poses[-1]
-        # second_last_pose = self.poses[-2]
-        # self.particle_filter.motion_update([second_last_pose, last_pose])
-        # self.particle_filter.measurement_update(images[1])
-        # self.particle_filter.sample_particles()
+        last_pose = self.poses[-1]
+        second_last_pose = self.poses[-2]
+        print(f"Odometry:\n\t{[second_last_pose, last_pose]}")
+        self.particle_filter.motion_update([second_last_pose, last_pose])
+        if iterator % 5 == 0:
+            print(">>>>> Updating Measurement")
+            self.particle_filter.measurement_update(
+                images[1], kp_list[1], des_list[1], iterator
+            )
+            self.particle_filter.sample_particles()
 
         # Part V. Save Visualization plot
-        # visualize_data(self.env_map.plot_map, showPlot=False)
-        # visualize_data(
-        #     self.particle_filter.plot_particles,
-        #     clean_start=False,
-        #     showPlot=False,
-        #     figName=f"frame{i}",
-        # )
-        # i += 1
+        visualize_data(self.env_map.plot_map, showPlot=False)
+        visualize_data(
+            self.particle_filter.plot_particles,
+            clean_start=False,
+            showPlot=False,
+            figName=f"frame{iterator}",
+        )
 
         # plt.cla()
         # npTraj = np.array(self.trajectory).T
         # visualize_trajectory(npTraj)
         # plt.savefig(f'dataviz/frame{i}.png')
+
+    def get_trajectory(self):
+        return np.array(self.trajectory).T
+
+    def get_robot_poses(self):
+        return self.poses

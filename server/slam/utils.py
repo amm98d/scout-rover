@@ -1,9 +1,11 @@
 import math
+import cv2
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D
+import os
 
 
 def calc_robot_pose(rmat, tvec, showAllDOF=False):
@@ -28,11 +30,12 @@ def calc_robot_pose(rmat, tvec, showAllDOF=False):
     )
     thetaZ = np.arctan2(rmat[1][0], rmat[0][0])  # Ignored in 3 DOF
 
-    if showAllDOF:
-        print(f"Coordinates:\n\t{[round(x, 5), round(y, 5), round(z, 5)]}")
-        print(f"Angles:\n\t{[round(thetaX, 5), round(thetaY, 5), round(thetaZ, 5)]}")
+    # if showAllDOF:
+    #     print(f"RMat:\n\t{rmat}")
+    #     print(f"Coordinates:\n\t{[round(x, 5), round(y, 5), round(z, 5)]}")
+    #     print(f"Angles:\n\t{[round(thetaX, 5), round(thetaY, 5), round(thetaZ, 5)]}")
 
-    return [round(x, 5), round(z, 5), round(thetaY, 5)]
+    return [round(x, 5), round(z, 5), round((np.pi / 2 - thetaY), 5)]
 
 
 # def extract_poses(particles):
@@ -48,16 +51,26 @@ def calc_robot_pose(rmat, tvec, showAllDOF=False):
 #     return poses
 
 
+def plot_robot_poses(poses):
+    plt.xlim([-10, 70])
+    plt.ylim([-10, 70])
+    for [x, y, t] in poses:
+        x2 = x + round(np.cos(t), 2)
+        y2 = y + round(np.sin(t), 2)
+        plt.plot(x, y, "bo", alpha=0.3)
+        plt.plot([x, x2], [y, y2], "k")
+
+
 def visualize_data(
     viz_ftn, clean_start=True, showPlot=True, figName="", *args, **kwargs
 ):
     if clean_start:
         plt.cla()
     viz_ftn(*args)
-    if figName != "":
-        plt.savefig(f"dataviz/{figName}.png")
     if showPlot:
         plt.show()
+    if figName != "":
+        plt.savefig(f"dataviz/{figName}.png")
 
 
 def visualize_trajectory(trajectory):
@@ -187,3 +200,83 @@ def visualize_trajectory(trajectory):
     # plt.axis('equal')
     D3_plt.view_init(45, azim=30)
     plt.tight_layout()
+
+
+#####################
+# LANDMARK UTILS
+#####################
+def applyTranformations(src_img, frameNumber="no"):
+  
+    destPath = "landmarksDetected"
+
+    src_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
+    src_img_hsv = cv2.cvtColor(src_img, cv2.COLOR_BGR2HSV)
+    org = src_img_hsv
+    yellow_lower = np.array([80, 100, 100])
+    yellow_upper = np.array([100, 255, 255])
+
+    mask = cv2.inRange(src_img_hsv, yellow_lower, yellow_upper)
+    kernel = np.ones((5, 5), np.uint8)
+    opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
+    kernel1 = np.ones((2, 2), np.uint8)
+    dilation = cv2.dilate(closing, kernel1, iterations=1)
+    
+    ##OPENCV-VERSIONS DIFFERENCE
+    _, contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    if len(contours) < 1:
+        if frameNumber != "no":
+            des = "./" + destPath + "/" + frameNumber + ".jpg"
+            cv2.imwrite(des, cv2.cvtColor(org, cv2.COLOR_HSV2RGB))
+        return -1, -1  # no rectangle exist
+
+    c1 = max(contours, key=cv2.contourArea)
+
+    rect = cv2.minAreaRect(c1)
+    X, Y, W, H = cv2.boundingRect(c1)
+    cropped = org[Y : Y + H, X : X + W]
+
+    h, s, v1 = cv2.split(cropped)
+
+    box = cv2.boxPoints(rect)
+    box = np.int0(box)
+    bdg_rect = cv2.drawContours(org, [box], 0, (0, 255, 255), 7)
+    tmpBdgRect = cv2.cvtColor(bdg_rect, cv2.COLOR_HSV2RGB)
+    # have to get the frame number here
+    if frameNumber != "no":
+        des = "./" + destPath + "/" + frameNumber + ".jpg"
+        cv2.imwrite(des, cv2.cvtColor(org, cv2.COLOR_HSV2RGB))
+
+    return v1, H
+
+
+def is_frame_blur(image, threshold):
+    fm = cv2.Laplacian(image, cv2.CV_64F).var()
+    if fm < threshold:
+        return True
+    return False
+
+
+def drop_frame(grey_imgs):
+    prevImg, currImg = grey_imgs
+
+    isBlur = is_frame_blur(currImg, 100)
+
+    ##sharpening images
+    # if(isBlue==True):
+    #     kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+    #     im = cv2.filter2D(img, -1, kernel)
+
+    if isBlur:
+        print(f"\t->Frame Filtered because isBlur: {isBlur}")
+        return True
+    return False
+
+
+def printFrame(img, name):
+    cv2.namedWindow(name, cv2.WINDOW_NORMAL)
+    cv2.imshow(name, img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
