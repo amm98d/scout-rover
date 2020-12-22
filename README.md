@@ -24,6 +24,7 @@ The commit messages should follow the following pattern:
   - Docs
 
 **PLATFORM:** Whether the change is on the server side or rover side or both
+  - Arduino
   - Server
   - Rover
   - Both
