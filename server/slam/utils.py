@@ -146,7 +146,8 @@ def visualize_trajectory(trajectory):
         linewidth=1,
     )
     # Plot camera initial location
-    traj_main_plt.scatter([0], [0], s=8, c="red", label="Start location", zorder=2)
+    traj_main_plt.scatter([0], [0], s=8, c="red",
+                          label="Start location", zorder=2)
     traj_main_plt.set_xlim([min, max])
     traj_main_plt.set_ylim([min, max])
     traj_main_plt.legend(
@@ -206,7 +207,7 @@ def visualize_trajectory(trajectory):
 # LANDMARK UTILS
 #####################
 def applyTranformations(src_img, frameNumber="no"):
-  
+
     destPath = "landmarksDetected"
 
     src_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
@@ -221,10 +222,14 @@ def applyTranformations(src_img, frameNumber="no"):
     closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
     kernel1 = np.ones((2, 2), np.uint8)
     dilation = cv2.dilate(closing, kernel1, iterations=1)
-    
-    ##OPENCV-VERSIONS DIFFERENCE
-    _, contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    #contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # OPENCV-VERSIONS DIFFERENCE
+    # _, contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # cross-version approach (https://stackoverflow.com/a/48292371/11395861)
+    contours, _ = cv2.findContours(
+        dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:]
 
     if len(contours) < 1:
         if frameNumber != "no":
@@ -236,7 +241,7 @@ def applyTranformations(src_img, frameNumber="no"):
 
     rect = cv2.minAreaRect(c1)
     X, Y, W, H = cv2.boundingRect(c1)
-    cropped = org[Y : Y + H, X : X + W]
+    cropped = org[Y: Y + H, X: X + W]
 
     h, s, v1 = cv2.split(cropped)
 
@@ -264,7 +269,7 @@ def drop_frame(grey_imgs):
 
     isBlur = is_frame_blur(currImg, 100)
 
-    ##sharpening images
+    # sharpening images
     # if(isBlue==True):
     #     kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
     #     im = cv2.filter2D(img, -1, kernel)
