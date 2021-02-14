@@ -100,31 +100,31 @@ class SLAM:
         #     print(f"\t->Frame Filtered because same TMat")
         #     return
 
-        # # Part IV. Localize
-        # last_pose = self.poses[-1]
-        # second_last_pose = self.poses[-2]
-        # print(f"Odometry:\n\t{[second_last_pose, last_pose]}")
-        # self.particle_filter.motion_update([second_last_pose, last_pose])
-        # if iterator % 5 == 0:
-        #     print(">>>>> Updating Measurement")
-        #     self.particle_filter.measurement_update(
-        #         images[1], kp_list[1], des_list[1], iterator
-        #     )
-        #     self.particle_filter.sample_particles()
+        # Part IV. Localize
+        last_pose = self.poses[-1]
+        second_last_pose = self.poses[-2]
+        print(f"Odometry:\n\t{[second_last_pose, last_pose]}")
+        self.particle_filter.motion_update([second_last_pose, last_pose])
+        if iterator % 5 == 0:
+            print(">>>>> Updating Measurement")
+            self.particle_filter.measurement_update(
+                images[1], kp_list[1], des_list[1], iterator
+            )
+            self.particle_filter.sample_particles()
 
-        # # Part V. Save Visualization plot
-        # visualize_data(self.env_map.plot_map, showPlot=False)
-        # visualize_data(
-        #     self.particle_filter.plot_particles,
-        #     clean_start=False,
-        #     showPlot=False,
-        #     figName=f"frame{iterator}",
-        # )
+        # Part V. Save Visualization plot
+        visualize_data(self.env_map.plot_map, showPlot=False)
+        visualize_data(
+            self.particle_filter.plot_particles,
+            clean_start=False,
+            showPlot=False,
+            figName=f"frame{iterator}",
+        )
 
         # plt.cla()
         # npTraj = np.array(self.trajectory).T
         # visualize_trajectory(npTraj)
-        # plt.savefig(f'dataviz/frame{i}.png')
+        # plt.savefig(f'dataviz/frame{iterator}.png')
 
     def get_trajectory(self):
         return np.array(self.trajectory).T

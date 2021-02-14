@@ -79,7 +79,7 @@ class Robot:
 
         if not isinstance(crop, int):
 
-            Nkp1, Ndes1 = extract_features(crop)
+            Nkp1, Ndes1 = orb_extractor(crop)
             if len(Nkp1) <= 1:
                 return -1, -1
 
@@ -88,8 +88,8 @@ class Robot:
                 # print(len(Ndes1))
                 # print(landmarks[k].des)
 
-                good = match_features(landmarks[k].des, Ndes1)
-                good = filter_matches_distance(good, 0.7)  # HYPER-PARAMETER
+                good = match_features([landmarks[k].des, Ndes1])
+                good = filter_matches(good)  # HYPER-PARAMETER
 
                 if len(good) > MIN_MATCH_COUNT:
                     goodFeatures.append((k, len(good)))
