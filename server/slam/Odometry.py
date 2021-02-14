@@ -68,20 +68,7 @@ def match_features(des_list, match_features_function=flann_matcher):
     return matches
 
 
-def threshold_filter(match, dist_threshold):
-
-    # Make sure only top 2 matches are provided
-    assert len(
-        match) == 2, f"{len(match)} matches provided to threshold_filter. Required = 2"
-
-    m, n = match
-    if m.distance < dist_threshold * n.distance:
-        return m
-
-    return
-
-
-def filter_matches(matches, filter_matches_function=threshold_filter):
+def filter_matches(matches):
 
     filtered_matches = []
     dist_threshold = 0.6
