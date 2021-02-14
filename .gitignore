@@ -178,3 +178,8 @@ pip-selfcheck.json
 *.code-workspace
 
 # End of https://www.toptal.com/developers/gitignore/api/python,linux,vscode,virtualenv
+
+# Project specific
+server/datasets/*
+!server/datasets/README.md
+server/dataviz/*

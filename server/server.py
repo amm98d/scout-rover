@@ -4,7 +4,7 @@ from time import sleep
 import os
 from platform import platform
 import numpy as np
-import cv2
+import cv2 as cv
 import urllib.request
 import fpstimer
 import select
@@ -73,7 +73,7 @@ class Server:
     def _takeMeasurements(self):
         imgResp = urllib.request.urlopen('http://192.168.100.45:8080/shot.jpg')
         imgNp = np.array(bytearray(imgResp.read()), dtype=np.uint8)
-        img = cv2.imdecode(imgNp, -1)
+        img = cv.imdecode(imgNp, -1)
         return img
 
     def initiateExploration(self):
@@ -115,7 +115,7 @@ class Server:
                 timer.sleep()
 
         finally:
-            cv2.destroyAllWindows()
+            cv.destroyAllWindows()
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
     def _clearScreen(self):
