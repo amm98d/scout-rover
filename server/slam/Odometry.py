@@ -41,7 +41,7 @@ def visualize_features(image, kp):
     plt.imshow(display)
 
 
-def match_features(des1, des2):
+def flann_matcher(des1, des2):
 
     FLANN_INDEX_LSH = 6
     index_params = dict(algorithm=FLANN_INDEX_LSH, trees=5)
@@ -53,14 +53,14 @@ def match_features(des1, des2):
     return match
 
 
-def match_features_dataset(des_list, match_features):
-    matches = []
+def match_features(des_list, match_features_function):
+    # Make sure only 2 descriptors are provided
+    assert len(
+        des_list) != 2, f"{len(des_list)} descriptors provided to match_features. Required = 2"
 
-    for i in range(len(des_list) - 1):
-        descriptor1 = des_list[i]
-        descriptor2 = des_list[i + 1]
-        match = match_features(descriptor1, descriptor2)
-        matches.append(match)
+    # Match descriptors
+    des1, des2 = des_list
+    matches = match_features_function(des1, des2)
 
     return matches
 
