@@ -65,23 +65,26 @@ def match_features(des_list, match_features_function):
     return matches
 
 
-def filter_matches_distance(match, dist_threshold):
+def threshold_filter(match, dist_threshold):
     filtered_match = []
-    for i, result in enumerate(match):
-        if len(result) == 2:
-            m, n = result
-            if m.distance < dist_threshold * n.distance:
-                filtered_match.append(m)
+    for result in match:
+        # Make sure only top 2 matches are provided
+        assert len(
+            result) != 2, f"{len(result)} matches provided to threshold_filter. Required = 2"
+
+        m, n = result
+        if m.distance < dist_threshold * n.distance:
+            filtered_match.append(m)
 
     return filtered_match
 
 
-def filter_matches_dataset(filter_matches_distance, matches):
+def filter_matches(matches, filter_matches_function):
     filtered_matches = []
     dist_threshold = 0.6
 
     for m in matches:
-        new_match = filter_matches_distance(m, dist_threshold)
+        new_match = filter_matches_function(m, dist_threshold)
         filtered_matches.append(new_match)
 
     return filtered_matches
