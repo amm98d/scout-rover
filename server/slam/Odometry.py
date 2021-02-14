@@ -12,14 +12,14 @@ def orb_extractor(image):
     return kp, des
 
 
-def extract_features(images, extract_features_function):
+def extract_features(images, extract_features_function=orb_extractor):
 
     kp_list = []
     des_list = []
 
     # Make sure only 2 images are provided
     assert len(
-        images) != 2, f"{len(images)} images provided to extract_features. Required = 2"
+        images) == 2, f"{len(images)} images provided to extract_features. Required = 2"
 
     img1, img2 = images
 
@@ -55,11 +55,11 @@ def flann_matcher(des1, des2):
     return match
 
 
-def match_features(des_list, match_features_function):
+def match_features(des_list, match_features_function=flann_matcher):
 
     # Make sure only 2 descriptors are provided
     assert len(
-        des_list) != 2, f"{len(des_list)} descriptors provided to match_features. Required = 2"
+        des_list) == 2, f"{len(des_list)} descriptors provided to match_features. Required = 2"
 
     # Match descriptors
     des1, des2 = des_list
@@ -70,27 +70,27 @@ def match_features(des_list, match_features_function):
 
 def threshold_filter(match, dist_threshold):
 
-    filtered_match = []
-    for result in match:
-        # Make sure only top 2 matches are provided
-        assert len(
-            result) != 2, f"{len(result)} matches provided to threshold_filter. Required = 2"
+    # Make sure only top 2 matches are provided
+    assert len(
+        match) == 2, f"{len(match)} matches provided to threshold_filter. Required = 2"
 
-        m, n = result
-        if m.distance < dist_threshold * n.distance:
-            filtered_match.append(m)
+    m, n = match
+    if m.distance < dist_threshold * n.distance:
+        return m
 
-    return filtered_match
+    return
 
 
-def filter_matches(matches, filter_matches_function):
+def filter_matches(matches, filter_matches_function=threshold_filter):
 
     filtered_matches = []
     dist_threshold = 0.6
 
-    for m in matches:
-        new_match = filter_matches_function(m, dist_threshold)
-        filtered_matches.append(new_match)
+    for match in matches:
+        if len(match) == 2:
+            m, n = match
+            if m.distance < dist_threshold * n.distance:
+                filtered_matches.append(m)
 
     return filtered_matches
 
@@ -169,24 +169,44 @@ def em_estimation(match, kp1, kp2, k):
     return rmat, tvec, image1_points, image2_points
 
 
+# def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_maps=[]):
+
+#     for i in range(len(matches)):
+#         match = matches[i]
+#         kp1 = kp_list[i]
+#         kp2 = kp_list[i + 1]
+
+#         rmat, tvec, _, _ = estimate_motion(
+#             match, kp1, kp2, k)
+#         if np.isscalar(rmat):
+#             print("estimate trajectory: NO RMAT, TVEC")
+#             return P, -1, -1
+#         rt_mtx = np.hstack([rmat, tvec])
+#         rt_mtx = np.vstack([rt_mtx, np.zeros([1, 4])])
+#         rt_mtx[-1, -1] = 1
+
+#         rt_mtx_inv = np.linalg.inv(rt_mtx)
+
+#         P = np.dot(P, rt_mtx_inv)
+
+#     return P, rmat, tvec
+
 def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_maps=[]):
 
-    for i in range(len(matches)):
-        match = matches[i]
-        kp1 = kp_list[i]
-        kp2 = kp_list[i + 1]
+    kp1 = kp_list[0]
+    kp2 = kp_list[1]
 
-        rmat, tvec, _, _ = estimate_motion(
-            match, kp1, kp2, k)
-        if np.isscalar(rmat):
-            print("estimate trajectory: NO RMAT, TVEC")
-            return P, -1, -1
-        rt_mtx = np.hstack([rmat, tvec])
-        rt_mtx = np.vstack([rt_mtx, np.zeros([1, 4])])
-        rt_mtx[-1, -1] = 1
+    rmat, tvec, _, _ = estimate_motion(
+        matches, kp1, kp2, k)
+    if np.isscalar(rmat):
+        print("estimate trajectory: NO RMAT, TVEC")
+        return P, -1, -1
+    rt_mtx = np.hstack([rmat, tvec])
+    rt_mtx = np.vstack([rt_mtx, np.zeros([1, 4])])
+    rt_mtx[-1, -1] = 1
 
-        rt_mtx_inv = np.linalg.inv(rt_mtx)
+    rt_mtx_inv = np.linalg.inv(rt_mtx)
 
-        P = np.dot(P, rt_mtx_inv)
+    P = np.dot(P, rt_mtx_inv)
 
     return P, rmat, tvec

@@ -64,20 +64,17 @@ class SLAM:
                 imgs_grey[1] = im
 
         # Part I. Features Extraction
-        kp_list, des_list = extract_features(
-            imgs_grey, extract_features_function=extract_features
-        )
+        kp_list, des_list = extract_features(imgs_grey)
 
         # Part II. Feature Matching
-        matches = match_features(des_list, match_features)
+        matches = match_features(des_list)
         is_main_filtered_m = True  # Filter matches
         if is_main_filtered_m:
-            filtered_matches = filter_matches(
-                threshold_filter, matches)
+            filtered_matches = filter_matches(matches)
             matches = filtered_matches
 
         # Removing Same frames
-        smatches = sorted(matches[0], key=lambda x: x.distance)
+        smatches = sorted(matches, key=lambda x: x.distance)
         sdiff = sum([x.distance for x in smatches[:500]])
         if sdiff < 1000:
             print(f"\t->->Frame Filtered because isSame: {sdiff}")
@@ -103,26 +100,26 @@ class SLAM:
         #     print(f"\t->Frame Filtered because same TMat")
         #     return
 
-        # Part IV. Localize
-        last_pose = self.poses[-1]
-        second_last_pose = self.poses[-2]
-        print(f"Odometry:\n\t{[second_last_pose, last_pose]}")
-        self.particle_filter.motion_update([second_last_pose, last_pose])
-        if iterator % 5 == 0:
-            print(">>>>> Updating Measurement")
-            self.particle_filter.measurement_update(
-                images[1], kp_list[1], des_list[1], iterator
-            )
-            self.particle_filter.sample_particles()
+        # # Part IV. Localize
+        # last_pose = self.poses[-1]
+        # second_last_pose = self.poses[-2]
+        # print(f"Odometry:\n\t{[second_last_pose, last_pose]}")
+        # self.particle_filter.motion_update([second_last_pose, last_pose])
+        # if iterator % 5 == 0:
+        #     print(">>>>> Updating Measurement")
+        #     self.particle_filter.measurement_update(
+        #         images[1], kp_list[1], des_list[1], iterator
+        #     )
+        #     self.particle_filter.sample_particles()
 
-        # Part V. Save Visualization plot
-        visualize_data(self.env_map.plot_map, showPlot=False)
-        visualize_data(
-            self.particle_filter.plot_particles,
-            clean_start=False,
-            showPlot=False,
-            figName=f"frame{iterator}",
-        )
+        # # Part V. Save Visualization plot
+        # visualize_data(self.env_map.plot_map, showPlot=False)
+        # visualize_data(
+        #     self.particle_filter.plot_particles,
+        #     clean_start=False,
+        #     showPlot=False,
+        #     figName=f"frame{iterator}",
+        # )
 
         # plt.cla()
         # npTraj = np.array(self.trajectory).T
