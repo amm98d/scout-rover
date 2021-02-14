@@ -16,13 +16,10 @@ def extract_features_dataset(images, extract_features_function):
     kp_list = []
     des_list = []
 
-    ### START CODE HERE ###
     for img in images:
         kp, des = extract_features(img)
         kp_list.append(kp)
         des_list.append(des)
-
-    ### END CODE HERE ###
 
     return kp_list, des_list
 
@@ -48,14 +45,11 @@ def match_features(des1, des2):
 def match_features_dataset(des_list, match_features):
     matches = []
 
-    ### START CODE HERE ###
     for i in range(len(des_list) - 1):
         descriptor1 = des_list[i]
         descriptor2 = des_list[i + 1]
         match = match_features(descriptor1, descriptor2)
         matches.append(match)
-
-    ### END CODE HERE ###
 
     return matches
 
@@ -74,19 +68,18 @@ def filter_matches_distance(match, dist_threshold):
 def filter_matches_dataset(filter_matches_distance, matches):
     filtered_matches = []
     dist_threshold = 0.6
-    ### START CODE HERE ###
+
     for m in matches:
         new_match = filter_matches_distance(m, dist_threshold)
         filtered_matches.append(new_match)
-
-    ### END CODE HERE ###
 
     return filtered_matches
 
 
 def visualize_matches(image1, kp1, image2, kp2, match):
 
-    image_matches = cv2.drawMatches(image1, kp1, image2, kp2, match, None, flags=2)
+    image_matches = cv2.drawMatches(
+        image1, kp1, image2, kp2, match, None, flags=2)
     plt.figure(figsize=(16, 6), dpi=100)
     plt.imshow(image_matches)
 
@@ -112,7 +105,8 @@ def estimate_motion(match, kp1, kp2, k):
     if len(image2_points) < 5:
         print(f"motion estimation: IMAGE POINTS LESS THAN 5")
         return -1, -1, -1, -1
-    E, mask = cv2.findEssentialMat(np.array(image1_points), np.array(image2_points), k)
+    E, mask = cv2.findEssentialMat(
+        np.array(image1_points), np.array(image2_points), k)
 
     retval, rmat, tvec, mask = cv2.recoverPose(
         E, np.array(image1_points), np.array(image2_points), k
@@ -122,7 +116,7 @@ def estimate_motion(match, kp1, kp2, k):
     return rmat, tvec, image1_points, image2_points
 
 
-###uska function
+# uska function
 def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_maps=[]):
     R = np.diag([1, 1, 1])
     T = np.zeros([3, 1])
@@ -135,7 +129,8 @@ def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_maps=[]):
         kp1 = kp_list[i]
         kp2 = kp_list[i + 1]
 
-        rmat, tvec, image1_points, image2_points = estimate_motion(match, kp1, kp2, k)
+        rmat, tvec, image1_points, image2_points = estimate_motion(
+            match, kp1, kp2, k)
         if np.isscalar(rmat):
             print("estimate trajectory: NO RMAT, TVEC")
             return P, -1, -1
