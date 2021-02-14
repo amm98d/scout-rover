@@ -3,7 +3,7 @@ import socket
 import os
 from platform import platform
 import numpy as np
-import cv2
+import cv2 as cv
 import urllib.request
 
 # import fpstimer
@@ -45,8 +45,8 @@ def createFrameGenerator():
         zeros = "0" * (5 - len(str(i)))
         fileName = f"{DIR_PATH}/{i}.jpg"
         print(f"Sending {fileName}")
-        img = cv2.imread(fileName, cv2.IMREAD_UNCHANGED)
-        # img = cv2.flip(img, 1)
+        img = cv.imread(fileName, cv.IMREAD_UNCHANGED)
+        # img = cv.flip(img, 1)
         yield img
 
 
