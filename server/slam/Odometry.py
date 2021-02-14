@@ -143,7 +143,6 @@ def essential_matrix_estimation(match, kp1, kp2, k):
     image2_points = []
 
     for m in match:
-        #         m = m[0]
         train_idx = m.trainIdx
         query_idx = m.queryIdx
 
@@ -156,10 +155,10 @@ def essential_matrix_estimation(match, kp1, kp2, k):
     if len(image2_points) < 5:
         print(f"motion estimation: IMAGE POINTS LESS THAN 5")
         return -1, -1, -1, -1
-    E, mask = cv.findEssentialMat(
+    E, _ = cv.findEssentialMat(
         np.array(image1_points), np.array(image2_points), k)
 
-    retval, rmat, tvec, mask = cv.recoverPose(
+    _, rmat, tvec, _ = cv.recoverPose(
         E, np.array(image1_points), np.array(image2_points), k
     )
     ### END CODE HERE ###
