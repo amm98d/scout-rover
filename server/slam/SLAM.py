@@ -42,7 +42,7 @@ class SLAM:
             croppedImg, _ = applyTranformations(img)
             # gray = cv.cvtColor(croppedImg, cv.COLOR_BGR2GRAY)
             # print(croppedImg.shape)
-            kp, des = extract_features(croppedImg)
+            kp, des = orb_extractor(croppedImg)
             env_map.add_landmark(
                 Landmark(crd[idx][0], crd[idx][1], kp, des, 12))
 
@@ -64,16 +64,16 @@ class SLAM:
                 imgs_grey[1] = im
 
         # Part I. Features Extraction
-        kp_list, des_list = extract_features_dataset(
+        kp_list, des_list = extract_features(
             imgs_grey, extract_features_function=extract_features
         )
 
         # Part II. Feature Matching
-        matches = match_features_dataset(des_list, match_features)
+        matches = match_features(des_list, match_features)
         is_main_filtered_m = True  # Filter matches
         if is_main_filtered_m:
-            filtered_matches = filter_matches_dataset(
-                filter_matches_distance, matches)
+            filtered_matches = filter_matches(
+                threshold_filter, matches)
             matches = filtered_matches
 
         # Removing Same frames
@@ -87,7 +87,7 @@ class SLAM:
         # Essential Matrix or PNP
         # pnp_estimation || essential_matrix_estimation
         self.P, rmat, tvec = estimate_trajectory(
-            essential_matrix_estimation, matches, kp_list, self.k, self.P
+            em_estimation, matches, kp_list, self.k, self.P
         )
         # No motion estimation
         if np.isscalar(rmat):
