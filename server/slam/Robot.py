@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 from Odometry import *
 from utils import *
 
@@ -13,7 +12,7 @@ class Robot:
         self.theta = round(pose[2], 5)
 
         # Noises
-        ## Motion noises
+        # Motion noises
         # self.alpha1 = 0.25  # rotation
         # self.alpha2 = 0.175  # translation
         # self.alpha3 = 0.175  # translation
@@ -22,7 +21,7 @@ class Robot:
         self.alpha2 = 0.03  # translation
         self.alpha3 = 0.3  # translation
         self.alpha4 = 0.2  # rotation
-        ## Measurement noises
+        # Measurement noises
         # self.alpha5 = 0.0  # bearing
         self.alpha6 = 10  # range
 
@@ -43,7 +42,8 @@ class Robot:
         xT_1, yT_1, thetaT_1 = self.x, self.y, self.theta
 
         rot1 = np.arctan2(ybarT - ybarT_1, xbarT - xbarT_1) - thetabarT_1
-        trans = np.sqrt(np.square(xbarT_1 - xbarT) + np.square(ybarT_1 - ybarT))
+        trans = np.sqrt(np.square(xbarT_1 - xbarT) +
+                        np.square(ybarT_1 - ybarT))
         rot2 = thetabarT - thetabarT_1 - rot1
 
         rothat1 = rot1 - np.random.normal(
@@ -72,13 +72,10 @@ class Robot:
         # Match features of landmark with img
         goodFeatures = []
         idx = -1
-        MIN_MATCH_COUNT = 10  ##HYPER-PARAMETER
+        MIN_MATCH_COUNT = 10  # HYPER-PARAMETER
         # print("Len of landmark", len(landmarks))
 
         crop, height = applyTranformations(img1, str(iterator))
-        
-        
-    
 
         if not isinstance(crop, int):
 
@@ -92,9 +89,8 @@ class Robot:
                 # print(landmarks[k].des)
 
                 good = match_features(landmarks[k].des, Ndes1)
-                good = filter_matches_distance(good, 0.7)  ##HYPER-PARAMETER
+                good = filter_matches_distance(good, 0.7)  # HYPER-PARAMETER
 
-        
                 if len(good) > MIN_MATCH_COUNT:
                     goodFeatures.append((k, len(good)))
 
