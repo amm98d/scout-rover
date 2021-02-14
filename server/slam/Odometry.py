@@ -1,11 +1,11 @@
 import numpy as np
-import cv2
+import cv2 as cv
 from utils import *
 
 
 def orb_extractor(image):
 
-    orb = cv2.ORB_create(nfeatures=5000, WTA_K=4)
+    orb = cv.ORB_create(nfeatures=5000, WTA_K=4)
     kp = orb.detect(image, None)
     kp, des = orb.compute(image, kp)
 
@@ -36,7 +36,7 @@ def extract_features(images, extract_features_function):
 
 
 def visualize_features(image, kp):
-    display = cv2.drawKeypoints(image, kp, None)
+    display = cv.drawKeypoints(image, kp, None)
     plt.figure(figsize=(8, 6), dpi=100)
     plt.imshow(display)
 
@@ -47,7 +47,7 @@ def flann_matcher(des1, des2):
     index_params = dict(algorithm=FLANN_INDEX_LSH, trees=5)
     search_params = dict(checks=50)  # or pass empty dictionary
 
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    flann = cv.FlannBasedMatcher(index_params, search_params)
     match = flann.knnMatch(des1, des2, k=2)
 
     return match
@@ -92,12 +92,13 @@ def filter_matches(matches, filter_matches_function):
 
 def visualize_matches(image1, kp1, image2, kp2, match):
 
-    image_matches = cv2.drawMatches(
+    image_matches = cv.drawMatches(
         image1, kp1, image2, kp2, match, None, flags=2)
     plt.figure(figsize=(16, 6), dpi=100)
     plt.imshow(image_matches)
 
-def pnp_estimation(match, kp1, kp2, k, trajectory , i ,  depth_maps=[]):
+
+def pnp_estimation(match, kp1, kp2, k, trajectory, i,  depth_maps=[]):
 
     image1_points = []
     image2_points = []
@@ -119,19 +120,19 @@ def pnp_estimation(match, kp1, kp2, k, trajectory , i ,  depth_maps=[]):
             w1_x = (p1_x - k[0][2]) * p1_z / k[0][0]
             w1_y = (p1_y - k[1][2]) * p1_z / k[1][1]
             object_points.append([w1_x, w1_y, p1_z])
- 
+
     object_points = np.array(object_points).astype('double')
     image2_points = np.array(image2_points).astype('double')
-    _, rvec, tvec, _ = cv2.solvePnPRansac(object_points, image2_points, k, None, flags=cv2.SOLVEPNP_EPNP)
-    
-    rmat, _ = cv2.Rodrigues(rvec)
-    
-    #qx,qy,qz,qw=cal_quaternion(rmat)
+    _, rvec, tvec, _ = cv.solvePnPRansac(
+        object_points, image2_points, k, None, flags=cv.SOLVEPNP_EPNP)
+
+    rmat, _ = cv.Rodrigues(rvec)
+
+    # qx,qy,qz,qw=cal_quaternion(rmat)
     #trajectory_line=f"{dataset_handler.timestamps_values[i]} {w1_x} {w1_y} {p1_z} {qx} {qy} {qz} {qw}\n"
-    #trajectory.write(trajectory_line)
+    # trajectory.write(trajectory_line)
 
     return rmat, tvec, image1_points, image2_points
-
 
 
 def essential_matrix_estimation(match, kp1, kp2, k):
@@ -155,10 +156,10 @@ def essential_matrix_estimation(match, kp1, kp2, k):
     if len(image2_points) < 5:
         print(f"motion estimation: IMAGE POINTS LESS THAN 5")
         return -1, -1, -1, -1
-    E, mask = cv2.findEssentialMat(
+    E, mask = cv.findEssentialMat(
         np.array(image1_points), np.array(image2_points), k)
 
-    retval, rmat, tvec, mask = cv2.recoverPose(
+    retval, rmat, tvec, mask = cv.recoverPose(
         E, np.array(image1_points), np.array(image2_points), k
     )
     ### END CODE HERE ###
