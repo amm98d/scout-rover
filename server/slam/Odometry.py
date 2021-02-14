@@ -90,8 +90,44 @@ def visualize_matches(image1, kp1, image2, kp2, match):
     plt.figure(figsize=(16, 6), dpi=100)
     plt.imshow(image_matches)
 
+def pnp_estimation(match, kp1, kp2, k, trajectory , i ,  depth_maps=[]):
 
-def estimate_motion(match, kp1, kp2, k):
+    image1_points = []
+    image2_points = []
+    object_points = []
+
+    for m in match:
+        query_idx = m.queryIdx
+        train_idx = m.trainIdx
+        # get first img matched keypoints
+        p1_x, p1_y = kp1[query_idx].pt
+        # get second img matched keypoints
+        p2_x, p2_y = kp2[train_idx].pt
+        p1_z = depth_maps[int(p1_y), int(p1_x)]
+        if p1_z != 0:
+            image1_points.append([p1_x, p1_y])
+            image2_points.append([p2_x, p2_y])
+            # Convert to object points
+            p1_z /= 5000
+            w1_x = (p1_x - k[0][2]) * p1_z / k[0][0]
+            w1_y = (p1_y - k[1][2]) * p1_z / k[1][1]
+            object_points.append([w1_x, w1_y, p1_z])
+ 
+    object_points = np.array(object_points).astype('double')
+    image2_points = np.array(image2_points).astype('double')
+    _, rvec, tvec, _ = cv2.solvePnPRansac(object_points, image2_points, k, None, flags=cv2.SOLVEPNP_EPNP)
+    
+    rmat, _ = cv2.Rodrigues(rvec)
+    
+    #qx,qy,qz,qw=cal_quaternion(rmat)
+    #trajectory_line=f"{dataset_handler.timestamps_values[i]} {w1_x} {w1_y} {p1_z} {qx} {qy} {qz} {qw}\n"
+    #trajectory.write(trajectory_line)
+
+    return rmat, tvec, image1_points, image2_points
+
+
+
+def essential_matrix_estimation(match, kp1, kp2, k):
 
     rmat = np.eye(3)
     tvec = np.zeros((3, 1))

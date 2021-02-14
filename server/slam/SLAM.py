@@ -83,8 +83,10 @@ class SLAM:
             return
 
         # Part III. Trajectory Estimation
+        # Essential Matrix or PNP
+        # pnp_estimation || essential_matrix_estimation 
         self.P, rmat, tvec = estimate_trajectory(
-            estimate_motion, matches, kp_list, self.k, self.P
+            essential_matrix_estimation, matches, kp_list, self.k, self.P
         )
         # No motion estimation
         if np.isscalar(rmat):
