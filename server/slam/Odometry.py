@@ -3,7 +3,7 @@ import cv2
 from utils import *
 
 
-def extract_features(image):
+def orb_extractor(image):
 
     orb = cv2.ORB_create(nfeatures=5000, WTA_K=4)
     kp = orb.detect(image, None)
@@ -12,14 +12,25 @@ def extract_features(image):
     return kp, des
 
 
-def extract_features_dataset(images, extract_features_function):
+def extract_features(images, extract_features_function):
     kp_list = []
     des_list = []
 
-    for img in images:
-        kp, des = extract_features(img)
-        kp_list.append(kp)
-        des_list.append(des)
+    # Make sure only 2 images are provided
+    assert len(
+        images) != 2, f"{len(images)} images provided to extract_features. Required = 2"
+
+    img1, img2 = images
+
+    # Extract keypoints and descriptors of img1
+    kp1, des1 = extract_features_function(img1)
+    kp_list.append(kp1)
+    des_list.append(des1)
+
+    # Extract keypoints and descriptors of img2
+    kp2, des2 = extract_features_function(img2)
+    kp_list.append(kp2)
+    des_list.append(des2)
 
     return kp_list, des_list
 
