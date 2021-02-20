@@ -11,6 +11,8 @@ import sys
 # import termios
 import numpy as np
 import cv2
+import io
+import zlib
 
 # internal modules
 import sys
@@ -93,7 +95,7 @@ class Server:
 
     def _takeMeasurements(self):
         byte_array = urllib.request.urlopen('http://192.168.100.113:5000/video_feed').read()
-        frame = np.frombuffer(byte_array, dtype='uint8').reshape((480, 640, 3))
+        frame = np.load(io.BytesIO(zlib.decompress(byte_array))) # decompressing
         return frame
 
     def initiateExploration(self):
@@ -117,9 +119,8 @@ class Server:
             # images = [frame_A, frame_B]
 
             # timer = fpstimer.FPSTimer(60)
-            while True:
-                byte_array = urllib.request.urlopen('http://192.168.100.113:5000/video_feed').read()
-                frame = np.frombuffer(byte_array, dtype='uint8').reshape((480, 640, 3))
+            while(True):
+                frame = self._takeMeasurements()
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 cv2.imshow('frame',gray)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
