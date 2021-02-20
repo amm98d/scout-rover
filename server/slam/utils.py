@@ -1,5 +1,5 @@
 import math
-import cv2
+import cv2 as cv
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -146,7 +146,8 @@ def visualize_trajectory(trajectory):
         linewidth=1,
     )
     # Plot camera initial location
-    traj_main_plt.scatter([0], [0], s=8, c="red", label="Start location", zorder=2)
+    traj_main_plt.scatter([0], [0], s=8, c="red",
+                          label="Start location", zorder=2)
     traj_main_plt.set_xlim([min, max])
     traj_main_plt.set_ylim([min, max])
     traj_main_plt.legend(
@@ -206,54 +207,58 @@ def visualize_trajectory(trajectory):
 # LANDMARK UTILS
 #####################
 def applyTranformations(src_img, frameNumber="no"):
-  
+
     destPath = "landmarksDetected"
 
-    src_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
-    src_img_hsv = cv2.cvtColor(src_img, cv2.COLOR_BGR2HSV)
+    src_img = cv.cvtColor(src_img, cv.COLOR_BGR2RGB)
+    src_img_hsv = cv.cvtColor(src_img, cv.COLOR_BGR2HSV)
     org = src_img_hsv
     yellow_lower = np.array([80, 100, 100])
     yellow_upper = np.array([100, 255, 255])
 
-    mask = cv2.inRange(src_img_hsv, yellow_lower, yellow_upper)
+    mask = cv.inRange(src_img_hsv, yellow_lower, yellow_upper)
     kernel = np.ones((5, 5), np.uint8)
-    opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
+    opening = cv.morphologyEx(mask, cv.MORPH_OPEN, kernel)
+    closing = cv.morphologyEx(opening, cv.MORPH_CLOSE, kernel)
     kernel1 = np.ones((2, 2), np.uint8)
-    dilation = cv2.dilate(closing, kernel1, iterations=1)
-    
-    ##OPENCV-VERSIONS DIFFERENCE
-    _, contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    #contours, _ = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    dilation = cv.dilate(closing, kernel1, iterations=1)
+
+    # OPENCV-VERSIONS DIFFERENCE
+    # _, contours, _ = cv.findContours(dilation, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    # contours, _ = cv.findContours(dilation, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+    # cross-version approach (https://stackoverflow.com/a/48292371/11395861)
+    contours, _ = cv.findContours(
+        dilation, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)[-2:]
 
     if len(contours) < 1:
         if frameNumber != "no":
             des = "./" + destPath + "/" + frameNumber + ".jpg"
-            cv2.imwrite(des, cv2.cvtColor(org, cv2.COLOR_HSV2RGB))
+            cv.imwrite(des, cv.cvtColor(org, cv.COLOR_HSV2RGB))
         return -1, -1  # no rectangle exist
 
-    c1 = max(contours, key=cv2.contourArea)
+    c1 = max(contours, key=cv.contourArea)
 
-    rect = cv2.minAreaRect(c1)
-    X, Y, W, H = cv2.boundingRect(c1)
-    cropped = org[Y : Y + H, X : X + W]
+    rect = cv.minAreaRect(c1)
+    X, Y, W, H = cv.boundingRect(c1)
+    cropped = org[Y: Y + H, X: X + W]
 
-    h, s, v1 = cv2.split(cropped)
+    h, s, v1 = cv.split(cropped)
 
-    box = cv2.boxPoints(rect)
+    box = cv.boxPoints(rect)
     box = np.int0(box)
-    bdg_rect = cv2.drawContours(org, [box], 0, (0, 255, 255), 7)
-    tmpBdgRect = cv2.cvtColor(bdg_rect, cv2.COLOR_HSV2RGB)
+    bdg_rect = cv.drawContours(org, [box], 0, (0, 255, 255), 7)
+    tmpBdgRect = cv.cvtColor(bdg_rect, cv.COLOR_HSV2RGB)
     # have to get the frame number here
     if frameNumber != "no":
         des = "./" + destPath + "/" + frameNumber + ".jpg"
-        cv2.imwrite(des, cv2.cvtColor(org, cv2.COLOR_HSV2RGB))
+        cv.imwrite(des, cv.cvtColor(org, cv.COLOR_HSV2RGB))
 
     return v1, H
 
 
 def is_frame_blur(image, threshold):
-    fm = cv2.Laplacian(image, cv2.CV_64F).var()
+    fm = cv.Laplacian(image, cv.CV_64F).var()
     if fm < threshold:
         return True
     return False
@@ -264,10 +269,10 @@ def drop_frame(grey_imgs):
 
     isBlur = is_frame_blur(currImg, 100)
 
-    ##sharpening images
+    # sharpening images
     # if(isBlue==True):
     #     kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-    #     im = cv2.filter2D(img, -1, kernel)
+    #     im = cv.filter2D(img, -1, kernel)
 
     if isBlur:
         print(f"\t->Frame Filtered because isBlur: {isBlur}")
@@ -276,7 +281,7 @@ def drop_frame(grey_imgs):
 
 
 def printFrame(img, name):
-    cv2.namedWindow(name, cv2.WINDOW_NORMAL)
-    cv2.imshow(name, img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv.namedWindow(name, cv.WINDOW_NORMAL)
+    cv.imshow(name, img)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
