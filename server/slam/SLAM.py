@@ -5,12 +5,13 @@ from Localization import Localization
 from Odometry import *
 from utils import *
 import glob
+import cv2 as cv
 import multiprocessing
 
 
 class SLAM:
     def __init__(self):
-        ## GLOBAL VARIABLES
+        # GLOBAL VARIABLES
         self.P = np.eye(4)  # Pose
 
         # self.k = np.array(
@@ -32,22 +33,23 @@ class SLAM:
         self.particle_filter = Localization(self.env_map)
 
     def _create_map(self, env_map):
-        ##store landmarks
+        # store landmarks
         landmark_imgs = glob.glob("./train/*.jpg")
         crd = [(0, 62), (62, 62)]  # coordinates
         for idx, img in enumerate(landmark_imgs):
-            img = cv2.imread(img)
+            img = cv.imread(img)
 
             croppedImg, _ = applyTranformations(img)
-            # gray = cv2.cvtColor(croppedImg, cv2.COLOR_BGR2GRAY)
+            # gray = cv.cvtColor(croppedImg, cv.COLOR_BGR2GRAY)
             # print(croppedImg.shape)
-            kp, des = extract_features(croppedImg)
-            env_map.add_landmark(Landmark(crd[idx][0], crd[idx][1], kp, des, 12))
+            kp, des = orb_extractor(croppedImg)
+            env_map.add_landmark(
+                Landmark(crd[idx][0], crd[idx][1], kp, des, 12))
 
     def process(self, images, iterator):
         imgs_grey = [
-            cv2.cvtColor(images[0], cv2.COLOR_BGR2GRAY),
-            cv2.cvtColor(images[1], cv2.COLOR_BGR2GRAY),
+            cv.cvtColor(images[0], cv.COLOR_BGR2GRAY),
+            cv.cvtColor(images[1], cv.COLOR_BGR2GRAY),
         ]
 
         # Check if this frame should be dropped (blur/same)
@@ -55,36 +57,34 @@ class SLAM:
         if drop_frame(imgs_grey):
             #print("Dropping the frame")
             print("Sharpening the frame")
-            fm = cv2.Laplacian(imgs_grey[1], cv2.CV_64F).var()
+            fm = cv.Laplacian(imgs_grey[1], cv.CV_64F).var()
             if fm < 40:
                 kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-                im = cv2.filter2D(imgs_grey[1], -1, kernel)  ##sharp
+                im = cv.filter2D(imgs_grey[1], -1, kernel)  # sharp
                 imgs_grey[1] = im
 
-            
-
         # Part I. Features Extraction
-        kp_list, des_list = extract_features_dataset(
-            imgs_grey, extract_features_function=extract_features
-        )
+        kp_list, des_list = extract_features(imgs_grey)
 
         # Part II. Feature Matching
-        matches = match_features_dataset(des_list, match_features)
+        matches = match_features(des_list)
         is_main_filtered_m = True  # Filter matches
         if is_main_filtered_m:
-            filtered_matches = filter_matches_dataset(filter_matches_distance, matches)
+            filtered_matches = filter_matches(matches)
             matches = filtered_matches
 
-        ##Removing Same frames
-        smatches = sorted(matches[0], key=lambda x: x.distance)
+        # Removing Same frames
+        smatches = sorted(matches, key=lambda x: x.distance)
         sdiff = sum([x.distance for x in smatches[:500]])
         if sdiff < 1000:
             print(f"\t->->Frame Filtered because isSame: {sdiff}")
             return
 
         # Part III. Trajectory Estimation
+        # Essential Matrix or PNP
+        # pnp_estimation || essential_matrix_estimation
         self.P, rmat, tvec = estimate_trajectory(
-            estimate_motion, matches, kp_list, self.k, self.P
+            em_estimation, matches, kp_list, self.k, self.P
         )
         # No motion estimation
         if np.isscalar(rmat):
@@ -124,7 +124,7 @@ class SLAM:
         # plt.cla()
         # npTraj = np.array(self.trajectory).T
         # visualize_trajectory(npTraj)
-        # plt.savefig(f'dataviz/frame{i}.png')
+        # plt.savefig(f'dataviz/frame{iterator}.png')
 
     def get_trajectory(self):
         return np.array(self.trajectory).T
