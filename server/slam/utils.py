@@ -64,13 +64,14 @@ def plot_robot_poses(poses):
 def visualize_data(
     viz_ftn, clean_start=True, showPlot=True, figName="", *args, **kwargs
 ):
+    fig = plt.gcf()  # Copy plot for showing and saving simultaneously
     if clean_start:
         plt.cla()
     viz_ftn(*args)
     if showPlot:
         plt.show()
     if figName != "":
-        plt.savefig(f"dataviz/{figName}.png")
+        fig.savefig(f"dataviz/{figName}.png")
 
 
 def visualize_trajectory(trajectory):
