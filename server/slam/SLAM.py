@@ -46,7 +46,7 @@ class SLAM:
             env_map.add_landmark(
                 Landmark(crd[idx][0], crd[idx][1], kp, des, 12))
 
-    def process(self, images, iterator):
+    def process(self, images, depths, iterator):
         imgs_grey = [
             cv.cvtColor(images[0], cv.COLOR_BGR2GRAY),
             cv.cvtColor(images[1], cv.COLOR_BGR2GRAY),
@@ -84,8 +84,7 @@ class SLAM:
         # Essential Matrix or PNP
         # pnp_estimation || essential_matrix_estimation
         self.P, rmat, tvec = estimate_trajectory(
-            em_estimation, matches, kp_list, self.k, self.P
-        )
+            matches, kp_list, self.k, self.P, depths[1])
         # No motion estimation
         if np.isscalar(rmat):
             return

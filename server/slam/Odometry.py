@@ -90,7 +90,7 @@ def visualize_matches(image1, kp1, image2, kp2, match):
     plt.imshow(image_matches)
 
 
-def pnp_estimation(match, kp1, kp2, k,  depth_maps=[]):
+def pnp_estimation(match, kp1, kp2, k,  depth_map=[]):
 
     image1_points = []
     image2_points = []
@@ -106,7 +106,7 @@ def pnp_estimation(match, kp1, kp2, k,  depth_maps=[]):
         # get second img matched keypoints
         p2_x, p2_y = kp2[train_idx].pt
 
-        p1_z = depth_maps[int(p1_y), int(p1_x)]
+        p1_z = depth_map[int(p1_y), int(p1_x)]
         if p1_z != 0:
             image1_points.append([p1_x, p1_y])
             image2_points.append([p2_x, p2_y])
@@ -156,7 +156,7 @@ def em_estimation(match, kp1, kp2, k):
     return rmat, tvec, image1_points, image2_points
 
 
-# def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_maps=[]):
+# def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_map=[]):
 
 #     for i in range(len(matches)):
 #         match = matches[i]
@@ -178,16 +178,22 @@ def em_estimation(match, kp1, kp2, k):
 
 #     return P, rmat, tvec
 
-def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_maps=[]):
+def estimate_trajectory(matches, kp_list, k, P, depth_map):
 
     kp1 = kp_list[0]
     kp2 = kp_list[1]
 
-    rmat, tvec, _, _ = estimate_motion(
-        matches, kp1, kp2, k)
+    if depth_map:
+        rmat, tvec, _, _ = pnp_estimation(
+            matches, kp1, kp2, k, depth_map)
+    else:
+        rmat, tvec, _, _ = em_estimation(
+            matches, kp1, kp2, k)
+
     if np.isscalar(rmat):
         print("estimate trajectory: NO RMAT, TVEC")
         return P, -1, -1
+
     rt_mtx = np.hstack([rmat, tvec])
     rt_mtx = np.vstack([rt_mtx, np.zeros([1, 4])])
     rt_mtx[-1, -1] = 1
