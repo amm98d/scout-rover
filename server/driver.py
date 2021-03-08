@@ -135,17 +135,8 @@ while True:
     images = [frameA, frameB]
     depths = [depthA, depthB]
 
-mapPoints = slamAlgorithm.mapPoints
-xs = [el[0] for el in mapPoints]
-ys = [el[1] for el in mapPoints]
-zs = [el[2] for el in mapPoints]
-fig = plt.figure()
-ax = plt.axes(projection='3d')
-ax.scatter3D(xs, ys, zs)
-fig.savefig("dataviz/map.png")
+trajectory = slamAlgorithm.get_trajectory()
+visualize_data(visualize_trajectory, True, True, "3D", trajectory)
 
-# trajectory = slamAlgorithm.get_trajectory()
-# visualize_data(visualize_trajectory, True, True, "3D", trajectory)
-
-# poses = slamAlgorithm.get_robot_poses()
-# visualize_data(plot_robot_poses, True, True, f"poses", poses)
+poses = slamAlgorithm.get_robot_poses()
+visualize_data(plot_robot_poses, True, True, f"poses", poses)
