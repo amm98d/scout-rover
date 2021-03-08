@@ -40,27 +40,27 @@ NUM_FRAMES = -1
 
 metadata = {
     0: {
-        'directory': "datasets/carla",
+        'directory': os.path.join('datasets', 'carla'),
         'depth': True,
         'associate': False,
     },
     1: {
-        'directory': "datasets/fr1_xyz",
+        'directory': os.path.join('datasets', 'fr1_xyz'),
         'depth': True,
         'associate': True,
     },
     2: {
-        'directory': "datasets/fr1_rpy",
+        'directory': os.path.join('datasets', 'fr1_rpy'),
         'depth': True,
         'associate': True,
     },
     3: {
-        'directory': "datasets/fr2_pslam",
+        'directory': os.path.join('datasets', 'fr2_pslam'),
         'depth': True,
         'associate': True,
     },
     4: {
-        'directory': "datasets/trajectory220",
+        'directory': os.path.join('datasets', 'trajectory220'),
         'depth': False,
         'associate': False,
     },
@@ -70,25 +70,26 @@ metadata = {
 def createFrameGenerator():
 
     directory = metadata[DATASET]['directory']
-    depth = metadata[DATASET]['directory']
+    hasDepth = metadata[DATASET]['directory']
 
-    rgbDir = directory + '/rgb/'
-    depthDir = directory + '/depth/'
-    rgbFileNames = os.listdir(rgbDir)
+    rgbDir = os.path.join(directory, 'rgb')
+    depthDir = os.path.join(directory, 'depth')
 
-    if depth:
-        depthFileNames = os.listdir(depthDir)
-        for rgbFile, depthFile in zip(rgbFileNames, depthFileNames):
-            img = cv.imread(rgbDir + rgbFile, cv.IMREAD_UNCHANGED)
-            depth = cv.imread(depthDir + depthFile, cv.IMREAD_UNCHANGED)
+    rgbFileNames = [os.path.join(rgbDir, fileName) for fileName in os.listdir(rgbDir)]
+    depthFileNames = [None for _ in range(len(rgbFileNames))]
+    if hasDepth:
+        depthFileNames = [
+            os.path.join(depthDir, fileName) for fileName in os.listdir(depthDir)
+        ]
 
+    for rgbFile, depthFile in zip(rgbFileNames, depthFileNames):
+        img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
+        if hasDepth:
+            depth = np.loadtxt(depthFile, delimiter=",",
+                               dtype=np.float64) * 1000.0
             yield img, depth
-
-    else:
-        for rgbFile in rgbFileNames:
-            img = cv.imread(rgbDir + rgbFile, cv.IMREAD_UNCHANGED)
-
-            yield img, None
+        else:
+            yield img, -1
 
 
 FRAME_GENERATOR = createFrameGenerator()
@@ -134,8 +135,17 @@ while True:
     images = [frameA, frameB]
     depths = [depthA, depthB]
 
-trajectory = slamAlgorithm.get_trajectory()
-visualize_data(visualize_trajectory, True, True, "3D", trajectory)
+mapPoints = slamAlgorithm.mapPoints
+xs = [el[0] for el in mapPoints]
+ys = [el[1] for el in mapPoints]
+zs = [el[2] for el in mapPoints]
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+ax.scatter3D(xs, ys, zs)
+fig.savefig("dataviz/map.png")
 
-poses = slamAlgorithm.get_robot_poses()
-visualize_data(plot_robot_poses, True, True, f"poses", poses)
+# trajectory = slamAlgorithm.get_trajectory()
+# visualize_data(visualize_trajectory, True, True, "3D", trajectory)
+
+# poses = slamAlgorithm.get_robot_poses()
+# visualize_data(plot_robot_poses, True, True, f"poses", poses)

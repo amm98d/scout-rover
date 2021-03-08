@@ -183,7 +183,7 @@ def estimate_trajectory(matches, kp_list, k, P, depth_map):
     kp1 = kp_list[0]
     kp2 = kp_list[1]
 
-    if depth_map:
+    if not np.isscalar(depth_map):
         rmat, tvec, _, _ = pnp_estimation(
             matches, kp1, kp2, k, depth_map)
     else:
