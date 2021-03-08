@@ -14,14 +14,14 @@ class SLAM:
         # GLOBAL VARIABLES
         self.P = np.eye(4)  # Pose
 
-        # self.k = np.array(
-        #     [[640.0, 0, 640.0], [0, 480.0, 480.0], [0, 0, 1.0]], dtype=np.float32,
-        # )
-        # ahmed dataset
         self.k = np.array(
-            [[827.0, 0.0, 638.0], [0.0, 826.0, 347], [0.0000, 0.0000, 1.0000]],
-            dtype=np.float32,
+            [[640.0, 0, 640.0], [0, 480.0, 480.0], [0, 0, 1.0]], dtype=np.float32,
         )
+        # ahmed dataset
+        # self.k = np.array(
+        #     [[827.0, 0.0, 638.0], [0.0, 826.0, 347], [0.0000, 0.0000, 1.0000]],
+        #     dtype=np.float32,
+        # )
 
         self.poses = [[0.0, 0.0, np.pi / 2]]  # initial pose
         self.trajectory = [np.array([0, 0, 0])]  # 3d trajectory
