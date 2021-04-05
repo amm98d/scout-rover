@@ -28,23 +28,6 @@ class SLAM:
         self.tMats = [
             (np.zeros((3, 3)), np.zeros((3, 1)))
         ]  # Transformation Matrices (rmat, tvec)
-        self.env_map = Map(62, 62)
-        self._create_map(self.env_map)
-        self.particle_filter = Localization(self.env_map)
-
-    def _create_map(self, env_map):
-        # store landmarks
-        landmark_imgs = glob.glob("./train/*.jpg")
-        crd = [(0, 62), (62, 62)]  # coordinates
-        for idx, img in enumerate(landmark_imgs):
-            img = cv.imread(img)
-
-            croppedImg, _ = applyTranformations(img)
-            # gray = cv.cvtColor(croppedImg, cv.COLOR_BGR2GRAY)
-            # print(croppedImg.shape)
-            kp, des = orb_extractor(croppedImg)
-            env_map.add_landmark(
-                Landmark(crd[idx][0], crd[idx][1], kp, des, 12))
 
     def process(self, images, depths, iterator):
         imgs_grey = [
