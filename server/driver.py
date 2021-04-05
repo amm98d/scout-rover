@@ -71,25 +71,42 @@ def createFrameGenerator():
 
     directory = metadata[DATASET]['directory']
     hasDepth = metadata[DATASET]['directory']
+    needsAssociation = metadata[DATASET]['associate']
 
     rgbDir = os.path.join(directory, 'rgb')
     depthDir = os.path.join(directory, 'depth')
 
-    rgbFileNames = [os.path.join(rgbDir, fileName) for fileName in os.listdir(rgbDir)]
-    depthFileNames = [None for _ in range(len(rgbFileNames))]
-    if hasDepth:
-        depthFileNames = [
-            os.path.join(depthDir, fileName) for fileName in os.listdir(depthDir)
-        ]
-
-    for rgbFile, depthFile in zip(rgbFileNames, depthFileNames):
-        img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
-        if hasDepth:
-            depth = np.loadtxt(depthFile, delimiter=",",
-                               dtype=np.float64) * 1000.0
+    if needsAssociation:
+        associationFile = os.path.join(directory, 'associated.txt')
+        with open(associationFile, 'r') as inFile:
+            fileData = inFile.readlines()
+        for line in fileData:
+            line = line.split()
+            rgb = line[1].split('/')[-1]
+            depth = line[3].split('/')[-1]
+            rgbFile = os.path.join(rgbDir, rgb)
+            depthFile = os.path.join(depthDir, depth)
+            img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
+            depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
             yield img, depth
-        else:
-            yield img, -1
+    else:
+        rgbFileNames = [os.path.join(rgbDir, fileName)
+                        for fileName in os.listdir(rgbDir)]
+        depthFileNames = [None for _ in range(len(rgbFileNames))]
+        if hasDepth:
+            depthFileNames = [
+                os.path.join(depthDir, fileName) for fileName in os.listdir(depthDir)
+            ]
+
+        for rgbFile, depthFile in zip(rgbFileNames, depthFileNames):
+            img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
+            if hasDepth:
+                depth = np.loadtxt(depthFile, delimiter=",",
+                                   dtype=np.float64) * 1000.0
+                # depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
+                yield img, depth
+            else:
+                yield img, -1
 
 
 FRAME_GENERATOR = createFrameGenerator()
