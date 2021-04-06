@@ -140,11 +140,22 @@ class SLAM:
             )
 
     def draw_trail(self):
-        for pose in self.trail:
+        if len(self.trail) < 2:
+            return
+        i = 0
+        while i < len(self.trail) - 1:
+            cv.line(
+                self.map,
+                self.trail[i],
+                self.trail[i+1],
+                (0, 0, 255),
+                1
+            )
             cv.circle(
                 self.map,
-                pose,
-                1,
+                self.trail[i],
+                2,
                 (0, 0, 255),
                 -1,
             )
+            i += 1
