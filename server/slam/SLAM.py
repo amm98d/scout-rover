@@ -18,6 +18,9 @@ class SLAM:
             camera_matrix, dtype=np.float32,
         )
         self.depthFactor = depthFactor
+        self.MAP_SIZE = 500
+        self.ROVER_RADIUS = 5
+        self.map = np.ones((self.MAP_SIZE, self.MAP_SIZE, 3))
 
         self.poses = [[0.0, 0.0, np.pi / 2]]  # initial pose
         self.trajectory = [np.array([0, 0, 0])]  # 3d trajectory
@@ -26,6 +29,7 @@ class SLAM:
         ]  # Transformation Matrices (rmat, tvec)
 
     def process(self, images, depths, iterator):
+        print(f"Processsing frame {iterator}")
         imgs_grey = [
             cv.cvtColor(images[0], cv.COLOR_BGR2GRAY),
             cv.cvtColor(images[1], cv.COLOR_BGR2GRAY),
@@ -75,8 +79,59 @@ class SLAM:
         self.trajectory.append(new_trajectory)
         self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3]))
 
+        # Visualize traj
+        OFFSETS = [self.MAP_SIZE // 2, self.MAP_SIZE // 2]
+        SCALES = [10, 10]
+        curr_pose = self.poses[-1]
+
+        robot_points = self.calc_robot_points(curr_pose, OFFSETS, SCALES)
+        self.draw_robot(robot_points)
+
+        cv.imshow('Map', self.map)
+        cv.imshow('Image', images[1])
+        cv.waitKey(20)
+
+        self.draw_robot(robot_points, 0)
+
     def get_trajectory(self):
         return np.array(self.trajectory).T
 
     def get_robot_poses(self):
         return self.poses
+
+    def calc_robot_points(self, curr_pose, OFFSETS, SCALES):
+        X_OFFSET, Y_OFFSET = OFFSETS
+        X_SCALE, Y_SCALE = SCALES
+
+        mapX = int(curr_pose[0] * X_SCALE + X_OFFSET)
+        mapY = self.MAP_SIZE - int(curr_pose[1] * Y_SCALE + Y_OFFSET)
+
+        thetaX = int(mapX + self.ROVER_RADIUS * math.cos(-curr_pose[2]))
+        thetaY = int(mapY + self.ROVER_RADIUS * math.sin(-curr_pose[2]))
+
+        return [mapX, mapY, thetaX, thetaY]
+
+    def draw_robot(self, robot_points, shouldDraw=1):
+        if shouldDraw:
+            cv.circle(
+                self.map,
+                (robot_points[0], robot_points[1]),
+                self.ROVER_RADIUS,
+                (0, 0, 0),
+                -1,
+            )
+            cv.line(
+                self.map,
+                (robot_points[0], robot_points[1]),
+                (robot_points[2], robot_points[3]),
+                (255, 255, 255),
+                self.ROVER_RADIUS // 4,
+            )
+        else:
+            cv.circle(
+                self.map,
+                (robot_points[0], robot_points[1]),
+                self.ROVER_RADIUS,
+                (255, 255, 255),
+                -1,
+            )
