@@ -5,7 +5,7 @@ from utils import *
 
 def orb_extractor(image):
 
-    orb = cv.ORB_create(nfeatures=5000, WTA_K=4)
+    orb = cv.ORB_create(nfeatures=1000, WTA_K=4)
     kp = orb.detect(image, None)
     kp, des = orb.compute(image, kp)
 
@@ -90,7 +90,7 @@ def visualize_matches(image1, kp1, image2, kp2, match):
     plt.imshow(image_matches)
 
 
-def pnp_estimation(match, kp1, kp2, k,  depth_map=[]):
+def pnp_estimation(match, kp1, kp2, k,  depth_map, depth_factor):
 
     image1_points = []
     image2_points = []
@@ -107,11 +107,11 @@ def pnp_estimation(match, kp1, kp2, k,  depth_map=[]):
         p2_x, p2_y = kp2[train_idx].pt
 
         p1_z = depth_map[int(p1_y), int(p1_x)]
-        if p1_z != 0:
+        p1_z /= depth_factor
+        if p1_z > 0 and p1_z < 1000:
             image1_points.append([p1_x, p1_y])
             image2_points.append([p2_x, p2_y])
             # Convert to object points
-            p1_z /= 5000
             w1_x = (p1_x - k[0][2]) * p1_z / k[0][0]
             w1_y = (p1_y - k[1][2]) * p1_z / k[1][1]
             object_points.append([w1_x, w1_y, p1_z])
@@ -178,14 +178,14 @@ def em_estimation(match, kp1, kp2, k):
 
 #     return P, rmat, tvec
 
-def estimate_trajectory(matches, kp_list, k, P, depth_map):
+def estimate_trajectory(matches, kp_list, k, P, depth_map, depth_factor):
 
     kp1 = kp_list[0]
     kp2 = kp_list[1]
 
     if not np.isscalar(depth_map):
         rmat, tvec, _, _ = pnp_estimation(
-            matches, kp1, kp2, k, depth_map)
+            matches, kp1, kp2, k, depth_map, depth_factor)
     else:
         rmat, tvec, _, _ = em_estimation(
             matches, kp1, kp2, k)

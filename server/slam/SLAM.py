@@ -10,18 +10,14 @@ import multiprocessing
 
 
 class SLAM:
-    def __init__(self):
+    def __init__(self, depthFactor, camera_matrix):
         # GLOBAL VARIABLES
         self.P = np.eye(4)  # Pose
 
         self.k = np.array(
-            [[640.0, 0, 640.0], [0, 480.0, 480.0], [0, 0, 1.0]], dtype=np.float32,
+            camera_matrix, dtype=np.float32,
         )
-        # ahmed dataset
-        # self.k = np.array(
-        #     [[827.0, 0.0, 638.0], [0.0, 826.0, 347], [0.0000, 0.0000, 1.0000]],
-        #     dtype=np.float32,
-        # )
+        self.depthFactor = depthFactor
 
         self.poses = [[0.0, 0.0, np.pi / 2]]  # initial pose
         self.trajectory = [np.array([0, 0, 0])]  # 3d trajectory
@@ -67,7 +63,7 @@ class SLAM:
         # Essential Matrix or PNP
         # pnp_estimation || essential_matrix_estimation
         self.P, rmat, tvec = estimate_trajectory(
-            matches, kp_list, self.k, self.P, depths[1])
+            matches, kp_list, self.k, self.P, depths[1], self.depthFactor)
         # No motion estimation
         if np.isscalar(rmat):
             return
@@ -76,8 +72,8 @@ class SLAM:
         # if not np.allclose(rmat, prevRmat) and not np.allclose(tvec, prevTvec):
         self.tMats.append((rmat, tvec))
         new_trajectory = self.P[:3, 3]
-        self.trajectory.append(new_trajectory * 2.95)
-        self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3] * 2.95))
+        self.trajectory.append(new_trajectory)
+        self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3]))
 
     def get_trajectory(self):
         return np.array(self.trajectory).T

@@ -43,26 +43,36 @@ metadata = {
         'directory': os.path.join('datasets', 'carla'),
         'depth': True,
         'associate': False,
+        'depth_factor': 1,
+        'camera_matrix': [[640.0, 0, 640.0], [0, 480.0, 480.0], [0, 0, 1.0]],
     },
     1: {
         'directory': os.path.join('datasets', 'fr1_xyz'),
         'depth': True,
         'associate': True,
+        'depth_factor': 5000,
+        'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
     },
     2: {
         'directory': os.path.join('datasets', 'fr1_rpy'),
         'depth': True,
         'associate': True,
+        'depth_factor': 5000,
+        'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
     },
     3: {
         'directory': os.path.join('datasets', 'fr2_pslam'),
         'depth': True,
         'associate': True,
+        'depth_factor': 5000,
+        'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
     },
     4: {
         'directory': os.path.join('datasets', 'trajectory220'),
         'depth': False,
         'associate': False,
+        'depth_factor': 0,
+        'camera_matrix': [[827.0, 0, 638.0], [0, 826.0, 347.0], [0, 0, 1.0]],
     },
 }
 
@@ -125,7 +135,9 @@ def getFrame():
 
 # GLOBAL VARIABLES
 # poseFig, poseAxis = plt.subplots()
-slamAlgorithm = SLAM()
+depthFactor = metadata[DATASET]['depth_factor']
+camera_matrix = metadata[DATASET]['camera_matrix']
+slamAlgorithm = SLAM(depthFactor, camera_matrix)
 
 frameA, depthA = getFrame()
 frameB, depthB = getFrame()
