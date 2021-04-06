@@ -27,6 +27,7 @@ class SLAM:
         self.tMats = [
             (np.zeros((3, 3)), np.zeros((3, 1)))
         ]  # Transformation Matrices (rmat, tvec)
+        self.trail = []
 
     def process(self, images, depths, iterator):
         print(f"Processsing frame {iterator}")
@@ -85,6 +86,8 @@ class SLAM:
         curr_pose = self.poses[-1]
 
         robot_points = self.calc_robot_points(curr_pose, OFFSETS, SCALES)
+        self.trail.append((robot_points[0], robot_points[1]))
+        self.draw_trail()
         self.draw_robot(robot_points)
 
         cv.imshow('Map', self.map)
@@ -133,5 +136,15 @@ class SLAM:
                 (robot_points[0], robot_points[1]),
                 self.ROVER_RADIUS,
                 (255, 255, 255),
+                -1,
+            )
+
+    def draw_trail(self):
+        for pose in self.trail:
+            cv.circle(
+                self.map,
+                pose,
+                1,
+                (0, 0, 255),
                 -1,
             )
