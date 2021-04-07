@@ -90,7 +90,7 @@ def visualize_matches(image1, kp1, image2, kp2, match):
     plt.imshow(image_matches)
 
 
-def pnp_estimation(match, kp1, kp2, k,  depth_map, depth_factor):
+def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
 
     image1_points = []
     image2_points = []
@@ -119,7 +119,7 @@ def pnp_estimation(match, kp1, kp2, k,  depth_map, depth_factor):
     object_points = np.array(object_points).astype('double')
     image2_points = np.array(image2_points).astype('double')
     _, rvec, tvec, _ = cv.solvePnPRansac(
-        object_points, image2_points, k, None, flags=cv.SOLVEPNP_EPNP)
+        object_points, image2_points, k, dist_coff, flags=cv.SOLVEPNP_EPNP)
 
     rmat, _ = cv.Rodrigues(rvec)
 
@@ -178,14 +178,14 @@ def em_estimation(match, kp1, kp2, k):
 
 #     return P, rmat, tvec
 
-def estimate_trajectory(matches, kp_list, k, P, depth_map, depth_factor):
+def estimate_trajectory(matches, kp_list, k, dist_coff, P, depth_map, depth_factor):
 
     kp1 = kp_list[0]
     kp2 = kp_list[1]
 
     if not np.isscalar(depth_map):
         rmat, tvec, _, _ = pnp_estimation(
-            matches, kp1, kp2, k, depth_map, depth_factor)
+            matches, kp1, kp2, k, dist_coff, depth_map, depth_factor)
     else:
         rmat, tvec, _, _ = em_estimation(
             matches, kp1, kp2, k)

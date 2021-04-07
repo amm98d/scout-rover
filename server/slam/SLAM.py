@@ -10,16 +10,19 @@ import multiprocessing
 
 
 class SLAM:
-    def __init__(self, depthFactor, camera_matrix):
+    def __init__(self, depthFactor, camera_matrix, dist_coff):
         # GLOBAL VARIABLES
         self.P = np.eye(4)  # Pose
 
         self.k = np.array(
             camera_matrix, dtype=np.float32,
         )
+        self.dist_coff = np.array(
+            dist_coff, dtype=np.float32,
+        ) if dist_coff else dist_coff
         self.depthFactor = depthFactor
-        self.MAP_SIZE = 500
-        self.ROVER_RADIUS = 5
+        self.MAP_SIZE = 1000
+        self.ROVER_RADIUS = 15
         self.map = np.ones((self.MAP_SIZE, self.MAP_SIZE, 3))
 
         self.poses = [[0.0, 0.0, np.pi / 2]]  # initial pose
@@ -68,7 +71,7 @@ class SLAM:
         # Essential Matrix or PNP
         # pnp_estimation || essential_matrix_estimation
         self.P, rmat, tvec = estimate_trajectory(
-            matches, kp_list, self.k, self.P, depths[1], self.depthFactor)
+            matches, kp_list, self.k, self.dist_coff, self.P, depths[1], self.depthFactor)
         # No motion estimation
         if np.isscalar(rmat):
             return
@@ -82,19 +85,24 @@ class SLAM:
 
         # Visualize traj
         OFFSETS = [self.MAP_SIZE // 2, self.MAP_SIZE // 2]
-        SCALES = [10, 10]
+        SCALES = [100, 100]
         curr_pose = self.poses[-1]
+        angle_diff = self.poses[0][2] - curr_pose[2]
 
         robot_points = self.calc_robot_points(curr_pose, OFFSETS, SCALES)
+        map_points = self.calc_map_points(
+            depths[1], angle_diff, robot_points[:2], SCALES)
         self.trail.append((robot_points[0], robot_points[1]))
         self.draw_trail()
         self.draw_robot(robot_points)
+        self.draw_map_points(map_points)
 
         cv.imshow('Map', self.map)
         cv.imshow('Image', images[1])
         cv.waitKey(20)
 
         self.draw_robot(robot_points, 0)
+        self.draw_map_points(map_points, 0)
 
     def get_trajectory(self):
         return np.array(self.trajectory).T
@@ -112,10 +120,39 @@ class SLAM:
         thetaX = int(mapX + self.ROVER_RADIUS * math.cos(-curr_pose[2]))
         thetaY = int(mapY + self.ROVER_RADIUS * math.sin(-curr_pose[2]))
 
-        return [mapX, mapY, thetaX, thetaY]
+        FOV = math.radians(57)  # 57 degrees
+        VRANGE = 300  # 100px -> 1m
+        ang1 = curr_pose[2] - FOV / 2
+        ang2 = curr_pose[2] + FOV / 2
+
+        line1X = int(mapX + VRANGE * math.cos(-ang1))
+        line1Y = int(mapY + VRANGE * math.sin(-ang1))
+        line2X = int(mapX + VRANGE * math.cos(-ang2))
+        line2Y = int(mapY + VRANGE * math.sin(-ang2))
+
+        return [mapX, mapY, thetaX, thetaY, line1X, line1Y, line2X, line2Y]
 
     def draw_robot(self, robot_points, shouldDraw=1):
+        FOV_COLOR = (255, 255, 0)
+        FOV_WIDTH = 2
         if shouldDraw:
+            # FOV LINE 1
+            cv.line(
+                self.map,
+                (robot_points[0], robot_points[1]),
+                (robot_points[4], robot_points[5]),
+                FOV_COLOR,
+                FOV_WIDTH,
+            )
+            # FOV LINE 2
+            cv.line(
+                self.map,
+                (robot_points[0], robot_points[1]),
+                (robot_points[6], robot_points[7]),
+                FOV_COLOR,
+                FOV_WIDTH,
+            )
+            # ROVER BASE
             cv.circle(
                 self.map,
                 (robot_points[0], robot_points[1]),
@@ -123,6 +160,7 @@ class SLAM:
                 (0, 0, 0),
                 -1,
             )
+            # ROVER DIRECTION
             cv.line(
                 self.map,
                 (robot_points[0], robot_points[1]),
@@ -131,6 +169,23 @@ class SLAM:
                 self.ROVER_RADIUS // 4,
             )
         else:
+            # FOV LINE 1
+            cv.line(
+                self.map,
+                (robot_points[0], robot_points[1]),
+                (robot_points[4], robot_points[5]),
+                (255, 255, 255),
+                FOV_WIDTH,
+            )
+            # FOV LINE 2
+            cv.line(
+                self.map,
+                (robot_points[0], robot_points[1]),
+                (robot_points[6], robot_points[7]),
+                (255, 255, 255),
+                FOV_WIDTH,
+            )
+            # ROVER BASE
             cv.circle(
                 self.map,
                 (robot_points[0], robot_points[1]),
@@ -159,3 +214,44 @@ class SLAM:
                 -1,
             )
             i += 1
+
+    def calc_map_points(self, depth, angle, OFFSETS, SCALES):
+        X_OFFSET, Y_OFFSET = OFFSETS
+        X_SCALE, Y_SCALE = SCALES
+        VALID_RANGE = [0, 200]
+
+        points = []
+        for col in range(0, depth.shape[1], 10):
+            nonZeroVals = [
+                (val, i)
+                for i, val in enumerate(depth[VALID_RANGE[0]:VALID_RANGE[1], col])
+                if val > 0
+            ]
+            if len(nonZeroVals):
+                Z, row = min(nonZeroVals, key=lambda i: i[0])
+                Z /= self.depthFactor
+                if Z > 0 and Z < 1000:
+                    X = (col - self.k[0][2]) * Z / self.k[0][0]
+                    Y = (row - self.k[1][2]) * Z / self.k[1][1]
+
+                    mapX = X * math.cos(angle) + Z * math.sin(angle)
+                    mapY = Z * math.cos(angle) - X * math.sin(angle)
+                    mapX = mapX * X_SCALE
+                    mapY = mapY * Y_SCALE
+                    mapX = mapX + X_OFFSET
+                    mapY = self.MAP_SIZE - (mapY + Y_OFFSET)
+
+                    points.append((int(mapX), int(mapY)))
+
+        return points
+
+    def draw_map_points(self, points, shouldDraw=1):
+        color = (0, 0, 0) if shouldDraw else (255, 255, 255)
+        for point in points:
+            cv.circle(
+                self.map,
+                point,
+                1,
+                color,
+                -1,
+            )

@@ -35,7 +35,7 @@ np.random.seed(1)
 #####################
 # READ FRAMES START
 #####################
-DATASET = 0
+DATASET = 3
 NUM_FRAMES = -1
 
 metadata = {
@@ -45,6 +45,7 @@ metadata = {
         'associate': False,
         'depth_factor': 1,
         'camera_matrix': [[640.0, 0, 640.0], [0, 480.0, 480.0], [0, 0, 1.0]],
+        'dist_coff': None,
     },
     1: {
         'directory': os.path.join('datasets', 'fr1_xyz'),
@@ -52,6 +53,7 @@ metadata = {
         'associate': True,
         'depth_factor': 5000,
         'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
+        'dist_coff': None, #[0.2624, -0.9531, -0.0054, 0.0026, 1.1633],
     },
     2: {
         'directory': os.path.join('datasets', 'fr1_rpy'),
@@ -59,6 +61,7 @@ metadata = {
         'associate': True,
         'depth_factor': 5000,
         'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
+        'dist_coff': None, #[0.2624, -0.9531, -0.0054, 0.0026, 1.1633],
     },
     3: {
         'directory': os.path.join('datasets', 'fr2_pslam'),
@@ -66,6 +69,7 @@ metadata = {
         'associate': True,
         'depth_factor': 5000,
         'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
+        'dist_coff': None, #[0.2312, -0.7849, -0.0033, -0.0001, 0.9172],
     },
     4: {
         'directory': os.path.join('datasets', 'trajectory220'),
@@ -73,6 +77,7 @@ metadata = {
         'associate': False,
         'depth_factor': 0,
         'camera_matrix': [[827.0, 0, 638.0], [0, 826.0, 347.0], [0, 0, 1.0]],
+        'dist_coff': None,
     },
 }
 
@@ -137,7 +142,8 @@ def getFrame():
 # poseFig, poseAxis = plt.subplots()
 depthFactor = metadata[DATASET]['depth_factor']
 camera_matrix = metadata[DATASET]['camera_matrix']
-slamAlgorithm = SLAM(depthFactor, camera_matrix)
+dist_coff = metadata[DATASET]['dist_coff']
+slamAlgorithm = SLAM(depthFactor, camera_matrix, dist_coff)
 
 frameA, depthA = getFrame()
 frameB, depthB = getFrame()
@@ -159,7 +165,7 @@ while True:
     frameA = np.copy(frameB)
     depthA = np.copy(depthB)
     frameB, depthB = getFrame()
-    if np.isscalar(frameB):
+    if np.isscalar(frameB) or i > 1000:
         break
     images = [frameA, frameB]
     depths = [depthA, depthB]
