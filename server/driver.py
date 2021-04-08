@@ -153,13 +153,10 @@ depths = [depthA, depthB]
 i = 2
 while True:
     # SLAMMING
-    slamAlgorithm.process(images, depths, i)
+    if i > 1:
+        slamAlgorithm.process(images, depths, i)
+        # cv.waitKey(2000)
     i += 1
-
-    # plt.cla()
-    # trajectory = slamAlgorithm.get_trajectory()
-    # visualize_trajectory(trajectory)
-    # plt.pause(1e-16)
 
     # Update Measurements
     frameA = np.copy(frameB)

@@ -70,7 +70,7 @@ class SLAM:
         # Part III. Trajectory Estimation
         # Essential Matrix or PNP
         # pnp_estimation || essential_matrix_estimation
-        self.P, rmat, tvec = estimate_trajectory(
+        self.P, rmat, tvec, image1_points, image2_points = estimate_trajectory(
             matches, kp_list, self.k, self.dist_coff, self.P, depths[1], self.depthFactor)
         # No motion estimation
         if np.isscalar(rmat):
@@ -98,7 +98,9 @@ class SLAM:
         self.draw_map_points(map_points)
 
         cv.imshow('Map', self.map)
-        cv.imshow('Image', images[1])
+        matches = visualize_camera_movement(
+            images[0], image1_points, images[1], image2_points)
+        cv.imshow('Image', matches)
         cv.waitKey(20)
 
         self.draw_robot(robot_points, 0)
@@ -206,13 +208,13 @@ class SLAM:
                 (0, 0, 255),
                 1
             )
-            cv.circle(
-                self.map,
-                self.trail[i],
-                2,
-                (0, 0, 255),
-                -1,
-            )
+            # cv.circle(
+            #     self.map,
+            #     self.trail[i],
+            #     2,
+            #     (0, 0, 255),
+            #     -1,
+            # )
             i += 1
 
     def calc_map_points(self, depth, angle, OFFSETS, SCALES):

@@ -90,6 +90,31 @@ def visualize_matches(image1, kp1, image2, kp2, match):
     plt.imshow(image_matches)
 
 
+def visualize_camera_movement(
+    image1, image1_points, image2, image2_points, is_show_img_after_move=False
+):
+    image1 = image1.copy()
+    image2 = image2.copy()
+
+    for i in range(0, len(image1_points)):
+        # Coordinates of a point on t frame
+        p1 = (int(image1_points[i][0]), int(image1_points[i][1]))
+        # Coordinates of the same point on t+1 frame
+        p2 = (int(image2_points[i][0]), int(image2_points[i][1]))
+
+        cv.circle(image1, p1, 5, (0, 255, 0), 1)
+        cv.arrowedLine(image1, p1, p2, (0, 255, 0), 1)
+        cv.circle(image1, p2, 5, (255, 0, 0), 1)
+
+        if is_show_img_after_move:
+            cv.circle(image2, p2, 5, (255, 0, 0), 1)
+
+    if is_show_img_after_move:
+        return image2
+    else:
+        return image1
+
+
 def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
 
     image1_points = []
@@ -184,10 +209,10 @@ def estimate_trajectory(matches, kp_list, k, dist_coff, P, depth_map, depth_fact
     kp2 = kp_list[1]
 
     if not np.isscalar(depth_map):
-        rmat, tvec, _, _ = pnp_estimation(
+        rmat, tvec, image1_points, image2_points = pnp_estimation(
             matches, kp1, kp2, k, dist_coff, depth_map, depth_factor)
     else:
-        rmat, tvec, _, _ = em_estimation(
+        rmat, tvec, image1_points, image2_points = em_estimation(
             matches, kp1, kp2, k)
 
     if np.isscalar(rmat):
@@ -202,4 +227,4 @@ def estimate_trajectory(matches, kp_list, k, dist_coff, P, depth_map, depth_fact
 
     P = np.dot(P, rt_mtx_inv)
 
-    return P, rmat, tvec
+    return P, rmat, tvec, image1_points, image2_points
