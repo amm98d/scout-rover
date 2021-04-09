@@ -94,7 +94,7 @@ class SLAM:
             depths[1], angle_diff, robot_points[:2], SCALES)
         self.trail.append((robot_points[0], robot_points[1]))
         self.draw_trail()
-        self.draw_robot(robot_points)
+        self.draw_robot(robot_points, 0)
         self.draw_map_points(map_points)
 
         cv.imshow('Map', self.map)
@@ -103,8 +103,8 @@ class SLAM:
         cv.imshow('Image', matches)
         cv.waitKey(20)
 
-        self.draw_robot(robot_points, 0)
-        self.draw_map_points(map_points, 0)
+        self.draw_robot(robot_points, 0, 0)
+        # self.draw_map_points(map_points, 0)
 
     def get_trajectory(self):
         return np.array(self.trajectory).T
@@ -134,26 +134,27 @@ class SLAM:
 
         return [mapX, mapY, thetaX, thetaY, line1X, line1Y, line2X, line2Y]
 
-    def draw_robot(self, robot_points, shouldDraw=1):
+    def draw_robot(self, robot_points, drawFOV=1, shouldDraw=1):
         FOV_COLOR = (255, 255, 0)
         FOV_WIDTH = 2
         if shouldDraw:
-            # FOV LINE 1
-            cv.line(
-                self.map,
-                (robot_points[0], robot_points[1]),
-                (robot_points[4], robot_points[5]),
-                FOV_COLOR,
-                FOV_WIDTH,
-            )
-            # FOV LINE 2
-            cv.line(
-                self.map,
-                (robot_points[0], robot_points[1]),
-                (robot_points[6], robot_points[7]),
-                FOV_COLOR,
-                FOV_WIDTH,
-            )
+            if drawFOV:
+                # FOV LINE 1
+                cv.line(
+                    self.map,
+                    (robot_points[0], robot_points[1]),
+                    (robot_points[4], robot_points[5]),
+                    FOV_COLOR,
+                    FOV_WIDTH,
+                )
+                # FOV LINE 2
+                cv.line(
+                    self.map,
+                    (robot_points[0], robot_points[1]),
+                    (robot_points[6], robot_points[7]),
+                    FOV_COLOR,
+                    FOV_WIDTH,
+                )
             # ROVER BASE
             cv.circle(
                 self.map,
@@ -171,22 +172,23 @@ class SLAM:
                 self.ROVER_RADIUS // 4,
             )
         else:
-            # FOV LINE 1
-            cv.line(
-                self.map,
-                (robot_points[0], robot_points[1]),
-                (robot_points[4], robot_points[5]),
-                (255, 255, 255),
-                FOV_WIDTH,
-            )
-            # FOV LINE 2
-            cv.line(
-                self.map,
-                (robot_points[0], robot_points[1]),
-                (robot_points[6], robot_points[7]),
-                (255, 255, 255),
-                FOV_WIDTH,
-            )
+            if drawFOV:
+                # FOV LINE 1
+                cv.line(
+                    self.map,
+                    (robot_points[0], robot_points[1]),
+                    (robot_points[4], robot_points[5]),
+                    (255, 255, 255),
+                    FOV_WIDTH,
+                )
+                # FOV LINE 2
+                cv.line(
+                    self.map,
+                    (robot_points[0], robot_points[1]),
+                    (robot_points[6], robot_points[7]),
+                    (255, 255, 255),
+                    FOV_WIDTH,
+                )
             # ROVER BASE
             cv.circle(
                 self.map,
