@@ -241,7 +241,7 @@ class SLAM:
                     mapX = mapX * X_SCALE
                     mapY = mapY * Y_SCALE
                     mapX = mapX + X_OFFSET
-                    mapY = self.MAP_SIZE - (mapY + Y_OFFSET)
+                    mapY = Y_OFFSET - mapY
 
                     points.append((int(mapX), int(mapY)))
 
