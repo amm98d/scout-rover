@@ -22,6 +22,7 @@ class SLAM:
         ) if dist_coff else dist_coff
         self.depthFactor = depthFactor
         self.MAP_SIZE = 1000
+        self.ROVER_DIMS = [29, 15]
         self.ROVER_RADIUS = 15
         self.map = np.ones((self.MAP_SIZE, self.MAP_SIZE, 3))
 
@@ -91,11 +92,11 @@ class SLAM:
 
         robot_points = self.calc_robot_points(curr_pose, OFFSETS, SCALES)
         map_points = self.calc_map_points(
-            depths[1], angle_diff, robot_points[:2], SCALES)
-        self.trail.append((robot_points[0], robot_points[1]))
+            depths[1], angle_diff, robot_points[1:3], SCALES)
+        self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
-        self.draw_robot(robot_points, 0)
-        self.draw_map_points(map_points)
+        self.draw_robot(robot_points, 0, 1)
+        # self.draw_map_points(map_points)
 
         cv.imshow('Map', self.map)
         matches = visualize_camera_movement(
@@ -112,91 +113,107 @@ class SLAM:
     def get_robot_poses(self):
         return self.poses
 
-    def calc_robot_points(self, curr_pose, OFFSETS, SCALES):
-        X_OFFSET, Y_OFFSET = OFFSETS
-        X_SCALE, Y_SCALE = SCALES
+    def calc_robot_points(self, curr_pose, offsets, scales):
+        X_OFFSET, Y_OFFSET = offsets
+        X_SCALE, Y_SCALE = scales
+        X_RADIUS, Y_RADIUS = self.ROVER_DIMS[1] / 2, self.ROVER_DIMS[0] / 2
 
-        mapX = int(curr_pose[0] * X_SCALE + X_OFFSET)
-        mapY = self.MAP_SIZE - int(curr_pose[1] * Y_SCALE + Y_OFFSET)
+        originX = int(curr_pose[0] * X_SCALE + X_OFFSET)
+        originY = self.MAP_SIZE - int(curr_pose[1] * Y_SCALE + Y_OFFSET)
 
-        thetaX = int(mapX + self.ROVER_RADIUS * math.cos(-curr_pose[2]))
-        thetaY = int(mapY + self.ROVER_RADIUS * math.sin(-curr_pose[2]))
+        thetaX = int(originX + X_RADIUS * math.cos(-curr_pose[2]))
+        thetaY = int(originY + X_RADIUS * math.sin(-curr_pose[2]))
 
-        FOV = math.radians(57)  # 57 degrees
+        FOV = math.radians(60)  # 57 degrees original value
         VRANGE = 300  # 100px -> 1m
         ang1 = curr_pose[2] - FOV / 2
         ang2 = curr_pose[2] + FOV / 2
 
-        line1X = int(mapX + VRANGE * math.cos(-ang1))
-        line1Y = int(mapY + VRANGE * math.sin(-ang1))
-        line2X = int(mapX + VRANGE * math.cos(-ang2))
-        line2Y = int(mapY + VRANGE * math.sin(-ang2))
+        line1X = int(originX + VRANGE * math.cos(-ang1))
+        line1Y = int(originY + VRANGE * math.sin(-ang1))
+        line2X = int(originX + VRANGE * math.cos(-ang2))
+        line2Y = int(originY + VRANGE * math.sin(-ang2))
 
-        return [mapX, mapY, thetaX, thetaY, line1X, line1Y, line2X, line2Y]
+        p1x = originX - X_RADIUS
+        p1y = originY - Y_RADIUS
+        p2x = originX + X_RADIUS
+        p2y = originY - Y_RADIUS
+        p3x = originX + X_RADIUS
+        p3y = originY + Y_RADIUS
+        p4x = originX - X_RADIUS
+        p4y = originY + Y_RADIUS
 
-    def draw_robot(self, robot_points, drawFOV=1, shouldDraw=1):
-        FOV_COLOR = (255, 255, 0)
+        # Rotate all points
+        angle_diff = curr_pose[2] - self.poses[0][2]
+        p1x, p1y = self.rotate_point(
+            (p1x, p1y), (originX, originY), angle_diff)
+        p2x, p2y = self.rotate_point(
+            (p2x, p2y), (originX, originY), angle_diff)
+        p3x, p3y = self.rotate_point(
+            (p3x, p3y), (originX, originY), angle_diff)
+        p4x, p4y = self.rotate_point(
+            (p4x, p4y), (originX, originY), angle_diff)
+
+        boxPoints = np.array([[p1x, p1y], [p2x, p2y], [p3x, p3y], [
+            p4x, p4y]], dtype=np.int32)
+
+        return [boxPoints, originX, originY, thetaX, thetaY, line1X, line1Y, line2X, line2Y]
+
+    def rotate_point(self, point, origin, angle):
+        px = point[0] - origin[0]
+        py = point[1] - origin[1]
+        rotX = px * math.cos(angle) + py * math.sin(angle)
+        rotY = py * math.cos(angle) - px * math.sin(angle)
+        rotX += origin[0]
+        rotY += origin[1]
+
+        return rotX, rotY
+
+    def draw_robot(self, robot_points, drawFOV=1, shouldDraw=1, roverType='SQUARE'):
         FOV_WIDTH = 2
-        if shouldDraw:
-            if drawFOV:
-                # FOV LINE 1
-                cv.line(
-                    self.map,
-                    (robot_points[0], robot_points[1]),
-                    (robot_points[4], robot_points[5]),
-                    FOV_COLOR,
-                    FOV_WIDTH,
-                )
-                # FOV LINE 2
-                cv.line(
-                    self.map,
-                    (robot_points[0], robot_points[1]),
-                    (robot_points[6], robot_points[7]),
-                    FOV_COLOR,
-                    FOV_WIDTH,
-                )
-            # ROVER BASE
-            cv.circle(
-                self.map,
-                (robot_points[0], robot_points[1]),
-                self.ROVER_RADIUS,
-                (0, 0, 0),
-                -1,
-            )
-            # ROVER DIRECTION
-            cv.line(
-                self.map,
-                (robot_points[0], robot_points[1]),
-                (robot_points[2], robot_points[3]),
-                (255, 255, 255),
-                self.ROVER_RADIUS // 4,
-            )
+        FOV_COLOR = (255, 255, 0) if drawFOV else (255, 255, 255)
+        DIR_COLOR = (255, 255, 255) if shouldDraw else (0, 0, 0)
+        ROVER_COLOR = (0, 0, 0) if shouldDraw else (255, 255, 255)
+
+        # FOV
+        cv.line(
+            self.map,
+            (robot_points[1], robot_points[2]),
+            (robot_points[5], robot_points[6]),
+            FOV_COLOR,
+            FOV_WIDTH,
+        )
+        cv.line(
+            self.map,
+            (robot_points[1], robot_points[2]),
+            (robot_points[7], robot_points[8]),
+            FOV_COLOR,
+            FOV_WIDTH,
+        )
+
+        if roverType == 'SQUARE':
+            rect = cv.minAreaRect(robot_points[0])
+            box = cv.boxPoints(rect)
+            box = np.int0(box)
+            cv.fillPoly(self.map, [box], ROVER_COLOR)  # filled
+            # cv.drawContours(self.map, [box], 0, ROVER_COLOR, 2) #unfilled
         else:
-            if drawFOV:
-                # FOV LINE 1
-                cv.line(
-                    self.map,
-                    (robot_points[0], robot_points[1]),
-                    (robot_points[4], robot_points[5]),
-                    (255, 255, 255),
-                    FOV_WIDTH,
-                )
-                # FOV LINE 2
-                cv.line(
-                    self.map,
-                    (robot_points[0], robot_points[1]),
-                    (robot_points[6], robot_points[7]),
-                    (255, 255, 255),
-                    FOV_WIDTH,
-                )
-            # ROVER BASE
             cv.circle(
                 self.map,
-                (robot_points[0], robot_points[1]),
-                self.ROVER_RADIUS,
-                (255, 255, 255),
+                (robot_points[1], robot_points[2]),
+                self.ROVER_DIMS[-1],
+                ROVER_COLOR,
                 -1,
             )
+
+        # ROVER DIRECTION
+        cv.line(
+            self.map,
+            (robot_points[1], robot_points[2]),
+            (robot_points[3], robot_points[4]),
+            DIR_COLOR,
+            self.ROVER_DIMS[-1] // 4,
+        )
 
     def draw_trail(self):
         if len(self.trail) < 2:
