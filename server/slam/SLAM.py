@@ -96,7 +96,7 @@ class SLAM:
         self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
         self.draw_robot(robot_points, 0, 1)
-        # self.draw_map_points(map_points)
+        self.draw_map_points(map_points)
 
         cv.imshow('Map', self.map)
         matches = visualize_camera_movement(
@@ -170,26 +170,27 @@ class SLAM:
         return rotX, rotY
 
     def draw_robot(self, robot_points, drawFOV=1, shouldDraw=1, roverType='SQUARE'):
-        FOV_WIDTH = 2
-        FOV_COLOR = (255, 255, 0) if drawFOV else (255, 255, 255)
         DIR_COLOR = (255, 255, 255) if shouldDraw else (0, 0, 0)
         ROVER_COLOR = (0, 0, 0) if shouldDraw else (255, 255, 255)
 
         # FOV
-        cv.line(
-            self.map,
-            (robot_points[1], robot_points[2]),
-            (robot_points[5], robot_points[6]),
-            FOV_COLOR,
-            FOV_WIDTH,
-        )
-        cv.line(
-            self.map,
-            (robot_points[1], robot_points[2]),
-            (robot_points[7], robot_points[8]),
-            FOV_COLOR,
-            FOV_WIDTH,
-        )
+        if drawFOV:
+            FOV_WIDTH = 2
+            FOV_COLOR = (255, 255, 0) if shouldDraw else (255, 255, 255)
+            cv.line(
+                self.map,
+                (robot_points[1], robot_points[2]),
+                (robot_points[5], robot_points[6]),
+                FOV_COLOR,
+                FOV_WIDTH,
+            )
+            cv.line(
+                self.map,
+                (robot_points[1], robot_points[2]),
+                (robot_points[7], robot_points[8]),
+                FOV_COLOR,
+                FOV_WIDTH,
+            )
 
         if roverType == 'SQUARE':
             rect = cv.minAreaRect(robot_points[0])
