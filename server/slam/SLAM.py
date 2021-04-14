@@ -22,7 +22,7 @@ class SLAM:
         ) if dist_coff else dist_coff
         self.depthFactor = depthFactor
         self.MAP_SIZE = 1000
-        self.ROVER_DIMS = [29, 15]
+        self.ROVER_DIMS = [15, 29]
         self.ROVER_RADIUS = 15
         self.map = np.ones((self.MAP_SIZE, self.MAP_SIZE, 3))
 
@@ -82,12 +82,14 @@ class SLAM:
         self.tMats.append((rmat, tvec))
         new_trajectory = self.P[:3, 3]
         self.trajectory.append(new_trajectory)
-        self.poses.append(calc_robot_pose(self.P[:3, :3], self.P[:, 3]))
+
+        curr_pose = calc_robot_pose(self.P[:3, :3], self.P[:, 3])
+        curr_pose[2] = self.poses[0][2] + (-1 * curr_pose[2])  # offset
+        self.poses.append(curr_pose)
 
         # Visualize traj
         OFFSETS = [self.MAP_SIZE // 2, self.MAP_SIZE // 2]
         SCALES = [100, 100]
-        curr_pose = self.poses[-1]
         angle_diff = self.poses[0][2] - curr_pose[2]
 
         robot_points = self.calc_robot_points(curr_pose, OFFSETS, SCALES)
@@ -95,7 +97,7 @@ class SLAM:
             depths[1], angle_diff, robot_points[1:3], SCALES)
         self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
-        self.draw_robot(robot_points, 0, 1)
+        self.draw_robot(robot_points, 1, 1)
         self.draw_map_points(map_points)
 
         cv.imshow('Map', self.map)
@@ -104,8 +106,8 @@ class SLAM:
         cv.imshow('Image', matches)
         cv.waitKey(20)
 
-        self.draw_robot(robot_points, 0, 0)
-        # self.draw_map_points(map_points, 0)
+        self.draw_robot(robot_points, 1, 0)
+        self.draw_map_points(map_points, 0)
 
     def get_trajectory(self):
         return np.array(self.trajectory).T
@@ -121,8 +123,8 @@ class SLAM:
         originX = int(curr_pose[0] * X_SCALE + X_OFFSET)
         originY = self.MAP_SIZE - int(curr_pose[1] * Y_SCALE + Y_OFFSET)
 
-        thetaX = int(originX + X_RADIUS * math.cos(-curr_pose[2]))
-        thetaY = int(originY + X_RADIUS * math.sin(-curr_pose[2]))
+        thetaX = int(originX + Y_RADIUS * math.cos(-curr_pose[2]))
+        thetaY = int(originY + Y_RADIUS * math.sin(-curr_pose[2]))
 
         FOV = math.radians(60)  # 57 degrees original value
         VRANGE = 300  # 100px -> 1m
@@ -144,15 +146,14 @@ class SLAM:
         p4y = originY + Y_RADIUS
 
         # Rotate all points
-        angle_diff = curr_pose[2] - self.poses[0][2]
         p1x, p1y = self.rotate_point(
-            (p1x, p1y), (originX, originY), angle_diff)
+            (p1x, p1y), (originX, originY), curr_pose[2])
         p2x, p2y = self.rotate_point(
-            (p2x, p2y), (originX, originY), angle_diff)
+            (p2x, p2y), (originX, originY), curr_pose[2])
         p3x, p3y = self.rotate_point(
-            (p3x, p3y), (originX, originY), angle_diff)
+            (p3x, p3y), (originX, originY), curr_pose[2])
         p4x, p4y = self.rotate_point(
-            (p4x, p4y), (originX, originY), angle_diff)
+            (p4x, p4y), (originX, originY), curr_pose[2])
 
         boxPoints = np.array([[p1x, p1y], [p2x, p2y], [p3x, p3y], [
             p4x, p4y]], dtype=np.int32)
@@ -169,12 +170,12 @@ class SLAM:
 
         return rotX, rotY
 
-    def draw_robot(self, robot_points, drawFOV=1, shouldDraw=1, roverType='SQUARE'):
-        DIR_COLOR = (255, 255, 255) if shouldDraw else (0, 0, 0)
+    def draw_robot(self, robot_points, addFOV=1, shouldDraw=1, roverType='SQUARE'):
+        DIR_COLOR = (255, 255, 255)
         ROVER_COLOR = (0, 0, 0) if shouldDraw else (255, 255, 255)
 
         # FOV
-        if drawFOV:
+        if addFOV:
             FOV_WIDTH = 2
             FOV_COLOR = (255, 255, 0) if shouldDraw else (255, 255, 255)
             cv.line(
@@ -208,13 +209,14 @@ class SLAM:
             )
 
         # ROVER DIRECTION
-        cv.line(
-            self.map,
-            (robot_points[1], robot_points[2]),
-            (robot_points[3], robot_points[4]),
-            DIR_COLOR,
-            self.ROVER_DIMS[-1] // 4,
-        )
+        if shouldDraw:
+            cv.line(
+                self.map,
+                (robot_points[1], robot_points[2]),
+                (robot_points[3], robot_points[4]),
+                DIR_COLOR,
+                self.ROVER_DIMS[-1] // 4,
+            )
 
     def draw_trail(self):
         if len(self.trail) < 2:
