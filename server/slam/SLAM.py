@@ -25,7 +25,7 @@ class SLAM:
         self.ROVER_DIMS = [15, 29]
         self.ROVER_RADIUS = 15
         self.MAP_COLOR = {
-            'unexplored': (128, 128, 128),
+            'unexplored': (200, 200, 200),
             'open': (255, 255, 255),
             'occupied': (0, 0, 0),
             'trail': (0, 0, 255),
@@ -104,8 +104,8 @@ class SLAM:
             depths[1], curr_pose[2], robot_points[1:3], SCALES)
         self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
-        self.draw_robot(robot_points, 0, 1)
         self.draw_map_points(map_points)
+        self.draw_robot(robot_points, 0, 1)
 
         cv.imshow('Map', self.map)
         matches = visualize_camera_movement(
@@ -178,7 +178,7 @@ class SLAM:
         return rotX, rotY
 
     def draw_robot(self, robot_points, addFOV=1, shouldDraw=1, roverType='SQUARE'):
-        ROVER_COLOR = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['unexplored']
+        ROVER_COLOR = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['open']
 
         # FOV
         if addFOV:
@@ -275,11 +275,18 @@ class SLAM:
 
                     points.append((int(mapX), int(mapY)))
 
-        return points
+        return (tuple(OFFSETS), points)
 
     def draw_map_points(self, points, shouldDraw=1):
         color = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['unexplored']
-        for point in points:
+        for point in points[1]:
+            cv.line(
+                self.map,
+                points[0],
+                point,
+                self.MAP_COLOR['open'],
+                1,
+            )
             cv.circle(
                 self.map,
                 point,
