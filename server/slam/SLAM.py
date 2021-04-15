@@ -24,7 +24,15 @@ class SLAM:
         self.MAP_SIZE = 1000
         self.ROVER_DIMS = [15, 29]
         self.ROVER_RADIUS = 15
-        self.map = np.ones((self.MAP_SIZE, self.MAP_SIZE, 3))
+        self.MAP_COLOR = {
+            'unexplored': (128, 128, 128),
+            'open': (255, 255, 255),
+            'occupied': (0, 0, 0),
+            'trail': (0, 0, 255),
+            'fov': (255, 255, 0),
+        }
+        self.map = np.zeros((self.MAP_SIZE, self.MAP_SIZE, 3), np.uint8)
+        self.map[:, :, :] = self.MAP_COLOR['unexplored']
 
         self.poses = [[0.0, 0.0, np.pi / 2]]  # initial pose
         self.trajectory = [np.array([0, 0, 0])]  # 3d trajectory
@@ -96,7 +104,7 @@ class SLAM:
             depths[1], curr_pose[2], robot_points[1:3], SCALES)
         self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
-        self.draw_robot(robot_points, 1, 1)
+        self.draw_robot(robot_points, 0, 1)
         self.draw_map_points(map_points)
 
         cv.imshow('Map', self.map)
@@ -105,8 +113,8 @@ class SLAM:
         cv.imshow('Image', matches)
         cv.waitKey(20)
 
-        self.draw_robot(robot_points, 1, 0)
-        self.draw_map_points(map_points, 0)
+        self.draw_robot(robot_points, 0, 0)
+        # self.draw_map_points(map_points, 0)
 
     def get_trajectory(self):
         return np.array(self.trajectory).T
@@ -170,13 +178,12 @@ class SLAM:
         return rotX, rotY
 
     def draw_robot(self, robot_points, addFOV=1, shouldDraw=1, roverType='SQUARE'):
-        DIR_COLOR = (255, 255, 255)
-        ROVER_COLOR = (0, 0, 0) if shouldDraw else (255, 255, 255)
+        ROVER_COLOR = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['unexplored']
 
         # FOV
         if addFOV:
             FOV_WIDTH = 2
-            FOV_COLOR = (255, 255, 0) if shouldDraw else (255, 255, 255)
+            FOV_COLOR = self.MAP_COLOR['fov'] if shouldDraw else self.MAP_COLOR['unexplored']
             cv.line(
                 self.map,
                 (robot_points[1], robot_points[2]),
@@ -213,7 +220,7 @@ class SLAM:
                 self.map,
                 (robot_points[1], robot_points[2]),
                 (robot_points[3], robot_points[4]),
-                DIR_COLOR,
+                self.MAP_COLOR['fov'],
                 self.ROVER_DIMS[-1] // 4,
             )
 
@@ -226,14 +233,14 @@ class SLAM:
                 self.map,
                 self.trail[i],
                 self.trail[i+1],
-                (0, 0, 255),
+                self.MAP_COLOR['trail'],
                 1
             )
             # cv.circle(
             #     self.map,
             #     self.trail[i],
             #     2,
-            #     (0, 0, 255),
+            #     self.MAP_COLOR['trail'],
             #     -1,
             # )
             i += 1
@@ -271,7 +278,7 @@ class SLAM:
         return points
 
     def draw_map_points(self, points, shouldDraw=1):
-        color = (0, 0, 0) if shouldDraw else (255, 255, 255)
+        color = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['unexplored']
         for point in points:
             cv.circle(
                 self.map,
