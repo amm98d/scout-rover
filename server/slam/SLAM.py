@@ -90,11 +90,10 @@ class SLAM:
         # Visualize traj
         OFFSETS = [self.MAP_SIZE // 2, self.MAP_SIZE // 2]
         SCALES = [100, 100]
-        angle_diff = self.poses[0][2] - curr_pose[2]
 
         robot_points = self.calc_robot_points(curr_pose, OFFSETS, SCALES)
         map_points = self.calc_map_points(
-            depths[1], angle_diff, robot_points[1:3], SCALES)
+            depths[1], curr_pose[2], robot_points[1:3], SCALES)
         self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
         self.draw_robot(robot_points, 1, 1)
@@ -243,6 +242,7 @@ class SLAM:
         X_OFFSET, Y_OFFSET = OFFSETS
         X_SCALE, Y_SCALE = SCALES
         VALID_RANGE = [0, 200]
+        angle += np.pi / 2
 
         points = []
         for col in range(0, depth.shape[1], 10):
@@ -258,12 +258,13 @@ class SLAM:
                     X = (col - self.k[0][2]) * Z / self.k[0][0]
                     Y = (row - self.k[1][2]) * Z / self.k[1][1]
 
+                    X *= -1
                     mapX = X * math.cos(angle) + Z * math.sin(angle)
                     mapY = Z * math.cos(angle) - X * math.sin(angle)
                     mapX = mapX * X_SCALE
                     mapY = mapY * Y_SCALE
                     mapX = mapX + X_OFFSET
-                    mapY = Y_OFFSET - mapY
+                    mapY = mapY + Y_OFFSET
 
                     points.append((int(mapX), int(mapY)))
 
