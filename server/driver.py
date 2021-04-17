@@ -72,6 +72,14 @@ metadata = {
         'dist_coff': None, #[0.2312, -0.7849, -0.0033, -0.0001, 0.9172],
     },
     4: {
+        'directory': os.path.join('datasets', 'fr2_p360'),
+        'depth': True,
+        'associate': True,
+        'depth_factor': 5000,
+        'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
+        'dist_coff': None, #[0.2312, -0.7849, -0.0033, -0.0001, 0.9172],
+    },
+    5: {
         'directory': os.path.join('datasets', 'trajectory220'),
         'depth': False,
         'associate': False,
