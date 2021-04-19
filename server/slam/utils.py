@@ -285,3 +285,11 @@ def printFrame(img, name):
     cv.imshow(name, img)
     cv.waitKey(0)
     cv.destroyAllWindows()
+
+
+def point2Dto3D(point, depth, k, depth_factor):
+    px, py = point
+    depth /= depth_factor
+    wx = (px - k[0][2]) * depth / k[0][0]
+    wy = (py - k[1][2]) * depth / k[1][1]
+    return (wx, wy, depth)

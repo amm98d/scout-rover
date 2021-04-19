@@ -71,7 +71,7 @@ def match_features(des_list, match_features_function=flann_matcher):
 def filter_matches(matches):
 
     filtered_matches = []
-    dist_threshold = 0.6
+    dist_threshold = 0.7
 
     for match in matches:
         if len(match) == 2:
@@ -119,7 +119,9 @@ def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
 
     image1_points = []
     image2_points = []
-    object_points = []
+    cloud1_points = []
+    cloud2_points = []
+    used_matches = []
 
     for m in match:
         query_idx = m.queryIdx
@@ -132,23 +134,34 @@ def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
         p2_x, p2_y = kp2[train_idx].pt
 
         p1_z = depth_map[int(p1_y), int(p1_x)]
-        p1_z /= depth_factor
-        if p1_z > 0 and p1_z < 1000:
+        p2_z = depth_map[int(p2_y), int(p2_x)]
+        w1_x, w1_y, w1_z = point2Dto3D((p1_x, p1_y), p1_z, k, depth_factor)
+        w2_x, w2_y, w2_z = point2Dto3D((p2_x, p2_y), p2_z, k, depth_factor)
+        if w1_z > 0 and w1_z < 1000:
+            used_matches.append(m)
             image1_points.append([p1_x, p1_y])
             image2_points.append([p2_x, p2_y])
-            # Convert to object points
-            w1_x = (p1_x - k[0][2]) * p1_z / k[0][0]
-            w1_y = (p1_y - k[1][2]) * p1_z / k[1][1]
-            object_points.append([w1_x, w1_y, p1_z])
+            cloud1_points.append([w1_x, w1_y, w1_z])
+            cloud2_points.append([w2_x, w2_y, w2_z])
 
-    object_points = np.array(object_points).astype('double')
+    cloud1_points = np.array(cloud1_points).astype('double')
+    cloud2_points = np.array(cloud2_points).astype('double')
+    image1_points = np.array(image1_points).astype('double')
     image2_points = np.array(image2_points).astype('double')
-    _, rvec, tvec, _ = cv.solvePnPRansac(
-        object_points, image2_points, k, dist_coff, flags=cv.SOLVEPNP_EPNP)
+
+    _, rvec, tvec, inliers = cv.solvePnPRansac(
+        cloud1_points, image2_points, k, dist_coff, flags=cv.SOLVEPNP_EPNP)
+
+    inliers = inliers.flatten()
+    used_matches = np.take(used_matches, inliers, 0)
+    image1_points = np.take(image1_points, inliers, 0)
+    image2_points = np.take(image2_points, inliers, 0)
+    cloud1_points = np.take(cloud1_points, inliers, 0)
+    cloud2_points = np.take(cloud2_points, inliers, 0)
 
     rmat, _ = cv.Rodrigues(rvec)
 
-    return rmat, tvec, image1_points, image2_points
+    return rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, len(inliers)
 
 
 def em_estimation(match, kp1, kp2, k):
@@ -209,7 +222,7 @@ def estimate_trajectory(matches, kp_list, k, dist_coff, P, depth_map, depth_fact
     kp2 = kp_list[1]
 
     if not np.isscalar(depth_map):
-        rmat, tvec, image1_points, image2_points = pnp_estimation(
+        rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, inliersCount = pnp_estimation(
             matches, kp1, kp2, k, dist_coff, depth_map, depth_factor)
     else:
         rmat, tvec, image1_points, image2_points = em_estimation(
@@ -227,4 +240,4 @@ def estimate_trajectory(matches, kp_list, k, dist_coff, P, depth_map, depth_fact
 
     P = np.dot(P, rt_mtx_inv)
 
-    return P, rmat, tvec, image1_points, image2_points
+    return P, rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, inliersCount

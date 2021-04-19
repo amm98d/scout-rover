@@ -4,6 +4,7 @@ from Robot import Robot
 from Localization import Localization
 from Odometry import *
 from utils import *
+import icp
 import glob
 import cv2 as cv
 import multiprocessing
@@ -21,6 +22,7 @@ class SLAM:
             dist_coff, dtype=np.float32,
         ) if dist_coff else dist_coff
         self.depthFactor = depthFactor
+        self.MIN_INLIERS = 5
         self.MAP_SIZE = 1000
         self.ROVER_DIMS = [15, 29]
         self.ROVER_RADIUS = 15
@@ -50,43 +52,50 @@ class SLAM:
 
         # Check if this frame should be dropped (blur/same)
 
-        if drop_frame(imgs_grey):
-            #print("Dropping the frame")
-            print("Sharpening the frame")
-            fm = cv.Laplacian(imgs_grey[1], cv.CV_64F).var()
-            if fm < 40:
-                kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-                im = cv.filter2D(imgs_grey[1], -1, kernel)  # sharp
-                imgs_grey[1] = im
+        # if drop_frame(imgs_grey):
+        #     #print("Dropping the frame")
+        #     print("Sharpening the frame")
+        #     fm = cv.Laplacian(imgs_grey[1], cv.CV_64F).var()
+        #     if fm < 40:
+        #         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+        #         im = cv.filter2D(imgs_grey[1], -1, kernel)  # sharp
+        #         imgs_grey[1] = im
 
         # Part I. Features Extraction
         kp_list, des_list = extract_features(imgs_grey)
 
-        # Part II. Feature Matching
+        # Part II. Feature Matching and Filtering
         matches = match_features(des_list)
-        is_main_filtered_m = True  # Filter matches
-        if is_main_filtered_m:
-            filtered_matches = filter_matches(matches)
-            matches = filtered_matches
-
-        # Removing Same frames
-        smatches = sorted(matches, key=lambda x: x.distance)
-        sdiff = sum([x.distance for x in smatches[:500]])
-        if sdiff < 1000:
-            print(f"\t->->Frame Filtered because isSame: {sdiff}")
-            return
+        matches = filter_matches(matches)
 
         # Part III. Trajectory Estimation
-        # Essential Matrix or PNP
-        # pnp_estimation || essential_matrix_estimation
-        self.P, rmat, tvec, image1_points, image2_points = estimate_trajectory(
+        self.P, rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, inliersCount = estimate_trajectory(
             matches, kp_list, self.k, self.dist_coff, self.P, depths[1], self.depthFactor)
+
+        # Remove same frames
+        sorted_matches = sorted([m.distance for m in used_matches])
+        move_mean = sum(sorted_matches) / len(sorted_matches)
+        if move_mean < 10:
+            print(f"\t->->Frame Filtered because isSame: {move_mean}")
+            return
+
         # No motion estimation
         if np.isscalar(rmat):
+            print(f"\t->->Frame Filtered because PnP failed")
             return
-        # Compare same frame
-        # prevRmat, prevTvec = self.tMats[-1]
-        # if not np.allclose(rmat, prevRmat) and not np.allclose(tvec, prevTvec):
+
+        # Not enough inliers
+        if inliersCount < self.MIN_INLIERS:
+            print(f"\t->->Frame Filtered because low inliers: {inliersCount}")
+            return
+            # To Do: ICP transformation estimation
+        else:
+            # Do ICP pose refinement of 3D point clouds
+            T, distances, iterations = icp.icp(
+                cloud2_points, cloud1_points, tolerance=1e-10)
+            rmat = T[:3, :3]
+            tvec = T[:3, 3:]
+
         self.tMats.append((rmat, tvec))
         new_trajectory = self.P[:3, 3]
         self.trajectory.append(new_trajectory)
@@ -260,11 +269,8 @@ class SLAM:
             ]
             if len(nonZeroVals):
                 Z, row = min(nonZeroVals, key=lambda i: i[0])
-                Z /= self.depthFactor
-                if Z > 0 and Z < 1000:
-                    X = (col - self.k[0][2]) * Z / self.k[0][0]
-                    Y = (row - self.k[1][2]) * Z / self.k[1][1]
-
+                X, Y, Z = point2Dto3D((col, row), Z, self.k, self.depthFactor)
+                if Z > 0 and Z < 2:
                     X *= -1
                     mapX = X * math.cos(angle) + Z * math.sin(angle)
                     mapY = Z * math.cos(angle) - X * math.sin(angle)
@@ -280,13 +286,13 @@ class SLAM:
     def draw_map_points(self, points, shouldDraw=1):
         color = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['unexplored']
         for point in points[1]:
-            cv.line(
-                self.map,
-                points[0],
-                point,
-                self.MAP_COLOR['open'],
-                1,
-            )
+            # cv.line(
+            #     self.map,
+            #     points[0],
+            #     point,
+            #     self.MAP_COLOR['open'],
+            #     1,
+            # )
             cv.circle(
                 self.map,
                 point,
