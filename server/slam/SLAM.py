@@ -22,6 +22,7 @@ class SLAM:
             dist_coff, dtype=np.float32,
         ) if dist_coff else dist_coff
         self.depthFactor = depthFactor
+        self.VALID_DRANGE = [0, 200]
         self.MIN_INLIERS = 5
         self.MAP_SIZE = 1000
         self.ROVER_DIMS = [15, 29]
@@ -257,14 +258,13 @@ class SLAM:
     def calc_map_points(self, depth, angle, OFFSETS, SCALES):
         X_OFFSET, Y_OFFSET = OFFSETS
         X_SCALE, Y_SCALE = SCALES
-        VALID_RANGE = [0, 200]
         angle += np.pi / 2
 
         points = []
         for col in range(0, depth.shape[1], 10):
             nonZeroVals = [
                 (val, i)
-                for i, val in enumerate(depth[VALID_RANGE[0]:VALID_RANGE[1], col])
+                for i, val in enumerate(depth[self.VALID_DRANGE[0]:self.VALID_DRANGE[1], col])
                 if val > 0
             ]
             if len(nonZeroVals):
