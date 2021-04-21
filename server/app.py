@@ -11,29 +11,15 @@ driverThread.start()
 
 def get_map_frame():
     frame = driver.slamAlgorithm.map
-    # frame= cv2.resize(frame,None,fx=ds_factor,fy=ds_factor,interpolation=cv2.INTER_AREA)
-    # gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    # encode OpenCV raw frame to jpg and displaying it
     ret, jpeg = cv2.imencode('.jpg', frame)
     return jpeg.tobytes()
 
 def get_video_frame():
-    frame = driver.slamAlgorithm.map
-    # frame= cv2.resize(frame,None,fx=ds_factor,fy=ds_factor,interpolation=cv2.INTER_AREA)
-    # gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    # encode OpenCV raw frame to jpg and displaying it
+    frame = driver.slamAlgorithm.matches
     ret, jpeg = cv2.imencode('.jpg', frame)
     return jpeg.tobytes()
 
 app = Flask(__name__)
-
-@app.route('/outputs')
-def outputs():
-    return render_template('outputs.html')
-
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 def genMap():
     while True:
@@ -44,6 +30,15 @@ def genVideo():
     while True:
         frame = get_video_frame()
         yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
+@app.route('/')
+@app.route('/home')
+def index():
+    return render_template('index.html')
+
+@app.route('/outputs')
+def outputs():
+    return render_template('outputs.html')
 
 @app.route('/mapping')
 def mapping():

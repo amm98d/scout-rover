@@ -81,7 +81,6 @@ class Driver:
                 'dist_coff': None,
             },
         }
-
     
     def createFrameGenerator(self):
 
@@ -124,18 +123,56 @@ class Driver:
                 else:
                     yield img, -1
 
-    def doSlam(self):
-        FRAME_GENERATOR = self.createFrameGenerator()
+    def getFrame(self, FRAME_GENERATOR):
+        for i in FRAME_GENERATOR:
+            return i
+        return -1, -1
 
         def getFrame():
             for i in FRAME_GENERATOR:
                 return i
+        #####################
+        # READ FRAMES END
+        #####################
 
-            return -1, -1
+    def sift_features(self, image):
+        features = []
+        sift = cv.xfeatures2d.SIFT_create()
+        (kp, des) = sift.detectAndCompute(image,None)
+        print()
+        print("kp.shape",len(kp))
+        print("des.shape",des.shape)
+        # features.append((kp, des))
+        # sift_vectors[key] = features
+        # return [descriptor_list, sift_vectors]
+
+    def doDataAssociation(self):
+        self.FRAME_GENERATOR = self.createFrameGenerator()
+
+        frameA,_ = self.getFrame(self.FRAME_GENERATOR)
+        frameB,_ = self.getFrame(self.FRAME_GENERATOR)
+        images = [frameA, frameB]
+
+        # sift features
+        # create histograms
 
         #####################
         # READ FRAMES END
         #####################
+
+        i = 2
+        while True:
+            self.slamAlgorithm.process(images)
+            # Update Measurements
+            frameA = np.copy(frameB)
+            frameB,_ = self.getFrame(self.FRAME_GENERATOR)
+            if np.isscalar(frameB) or i > 1000:
+                break
+            images = [frameA, frameB]
+            i += 1
+
+    def doSlam(self):
+        self.FRAME_GENERATOR = self.createFrameGenerator()
 
         # GLOBAL VARIABLES
         # poseFig, poseAxis = plt.subplots()
@@ -144,8 +181,8 @@ class Driver:
         dist_coff = self.metadata[self.DATASET]['dist_coff']
         self.slamAlgorithm = SLAM(depthFactor, camera_matrix, dist_coff)
 
-        frameA, depthA = getFrame()
-        frameB, depthB = getFrame()
+        frameA, depthA = self.getFrame(self.FRAME_GENERATOR)
+        frameB, depthB = self.getFrame(self.FRAME_GENERATOR)
         images = [frameA, frameB]
         depths = [depthA, depthB]
 
@@ -160,7 +197,7 @@ class Driver:
             # Update Measurements
             frameA = np.copy(frameB)
             depthA = np.copy(depthB)
-            frameB, depthB = getFrame()
+            frameB, depthB = self.getFrame(self.FRAME_GENERATOR)
             if np.isscalar(frameB) or i > 1000:
                 break
             images = [frameA, frameB]

@@ -47,29 +47,23 @@
             <div class="col-12">
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item h2 mapping" style="border:solid 2px; border-radius: 4px;" data-bs-toggle="collapse" data-bs-target="#mappingDiv">
-                        <span style="font-size: 30px; ">Show Mapping</span>
-                        <i class="bi bi-play" style="float: right"></i>
+                        <span style=" font-size: 30px; ">Show Mapping</span>
+                        <i class="bi bi-play " style="float: right "></i>
                     </li>
                     <div class="collapse" id="mappingDiv">
-                        <li class="list-group-item edu-${i}" style="border: 2px solid gray;">
-                            <div class="row" style="line-height: 1.5; ">
-                                <div class="col-6 institute-${i} " style="font-size: 16px; font-weight: 600;">
-                                    <img src="{{ url_for('mapping') }}" class="img-thumbnail" id="bg" height="1000" width="1000" style="border: 2px solid gray;">
+                        <li class="list-group-item edu-${i} " style="border: 2px solid gray; ">
+                            <div class="row " style="line-height: 1.5; ">
+                                <div class="col-6 institute-${i} " style="font-size: 16px; font-weight: 600; ">
+                                    <img src="{{ url_for( 'mapping') }} " class="img-thumbnail " id="bg " height="1000 " width="1000 " style="border: 2px solid gray; ">
                                 </div>
-                                <div class="col-6 institute-${i} " style="font-size: 16px; font-weight: 600;">
-                                    <img src="{{ url_for('video') }}" class="img-thumbnail" id="bg" height="1000" width="1000" style="border: 2px solid gray;">
+                                <div class="col-6 institute-${i} " style="font-size: 16px; font-weight: 600; ">
+                                    <img src="{{ url_for( 'video') }} " class="img-thumbnail " id="bg " height="1000 " width="1000 " style="border: 2px solid gray; ">
                                 </div>
                             </div>
                         </li>
                     </div>
                 </ul>
             </div>
-        </div>
-    </div>
-
-    <div class="bottoms fixed-bottom ">
-        <div class="progress ">
-            <div class="progress-bar bg-dark " role="progressbar " aria-valuenow="10 " style="width: 100% " aria-valuemin="10 " aria-valuemax="100 "></div>
         </div>
     </div>
 

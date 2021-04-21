@@ -142,7 +142,7 @@ class SLAM:
         # cv.imshow('Log Map', 1.0 - 1./(1.+np.exp(self.log_prob_map)))
         matches = visualize_camera_movement(
             images[0], image1_points, images[1], image2_points)
-        cv.imshow('Image', matches)
+        # cv.imshow('Image', matches)
         cv.waitKey(20)
 
         self.draw_robot(robot_points, 0, 0)
