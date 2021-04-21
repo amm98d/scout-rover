@@ -9,8 +9,8 @@ import glob
 import cv2 as cv
 import multiprocessing
 import grid_map_utils as gmu
-import scipy.io
-import scipy.stats
+# import scipy.io
+# import scipy.stats
 
 
 class SLAM:
@@ -28,7 +28,7 @@ class SLAM:
         self.VALID_DRANGE = [0, 500]
         self.MIN_INLIERS = 5
         self.MAP_SIZE = 1000
-        self.CELL_SIZE = 5
+        self.CELL_SIZE = 1
         self.ROVER_DIMS = [15, 29]
         self.ROVER_RADIUS = 15
         self.MAP_COLOR = {
@@ -105,16 +105,16 @@ class SLAM:
             return
 
         # Not enough inliers
-        if inliersCount < self.MIN_INLIERS:
-            print(f"\t->->Frame Filtered because low inliers: {inliersCount}")
-            return
-            # To Do: ICP transformation estimation
-        else:
-            # Do ICP pose refinement of 3D point clouds
-            T, distances, iterations = icp.icp(
-                cloud2_points, cloud1_points, tolerance=1e-10)
-            rmat = T[:3, :3]
-            tvec = T[:3, 3:]
+        # if inliersCount < self.MIN_INLIERS:
+        #     print(f"\t->->Frame Filtered because low inliers: {inliersCount}")
+        #     return
+        #     # To Do: ICP transformation estimation
+        # else:
+        #     # Do ICP pose refinement of 3D point clouds
+        #     T, distances, iterations = icp.icp(
+        #         cloud2_points, cloud1_points, tolerance=1e-10)
+        #     rmat = T[:3, :3]
+        #     tvec = T[:3, 3:]
 
         self.tMats.append((rmat, tvec))
         new_trajectory = self.P[:3, 3]
@@ -131,22 +131,22 @@ class SLAM:
         robot_points = self.calc_robot_points(curr_pose, OFFSETS, SCALES)
         map_points = self.calc_map_points(
             depths[1], curr_pose[2], robot_points[1:3], SCALES)
-        self.update_map(map_points)
+        # self.update_map(map_points)
         self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
-        self.draw_map_points(map_points)
+        self.draw_map_points(map_points, 0)
         self.draw_robot(robot_points, 0, 1)
 
         cv.imshow('Map', self.map)
         # cv.imshow('Log Map', self.log_prob_map)
-        cv.imshow('Log Map', 1.0 - 1./(1.+np.exp(self.log_prob_map)))
+        # cv.imshow('Log Map', 1.0 - 1./(1.+np.exp(self.log_prob_map)))
         matches = visualize_camera_movement(
             images[0], image1_points, images[1], image2_points)
-        # cv.imshow('Image', matches)
+        cv.imshow('Image', matches)
         cv.waitKey(20)
 
         self.draw_robot(robot_points, 0, 0)
-        # self.draw_map_points(map_points, 0)
+        # self.draw_map_points(map_points, 0, 0)
 
     def depth_to_lidar(self, map_points):
         angles = []
@@ -340,19 +340,21 @@ class SLAM:
 
         return (tuple(OFFSETS), points, openspaces)
 
-    def draw_map_points(self, points, shouldDraw=1):
+    def draw_map_points(self, points, showOpenSpaces=0, shouldDraw=1):
         color = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['unexplored']
-        for point in points[2]:
-            px, py = point
-            px -= px % self.CELL_SIZE
-            py -= py % self.CELL_SIZE
-            cv.rectangle(
-                self.map,
-                (px, py),
-                (px+self.CELL_SIZE, py+self.CELL_SIZE),
-                self.MAP_COLOR['open'],
-                -1,
-            )
+        opencolor = self.MAP_COLOR['open'] if shouldDraw else self.MAP_COLOR['unexplored']
+        if showOpenSpaces:
+            for point in points[2]:
+                px, py = point
+                px -= px % self.CELL_SIZE
+                py -= py % self.CELL_SIZE
+                cv.rectangle(
+                    self.map,
+                    (px, py),
+                    (px+self.CELL_SIZE, py+self.CELL_SIZE),
+                    opencolor,
+                    -1,
+                )
         for point in points[1]:
             px, py = point
             px -= px % self.CELL_SIZE
