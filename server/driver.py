@@ -128,12 +128,9 @@ class Driver:
             return i
         return -1, -1
 
-        def getFrame():
-            for i in FRAME_GENERATOR:
-                return i
-        #####################
-        # READ FRAMES END
-        #####################
+    #####################
+    # READ FRAMES END
+    #####################
 
     def doSlam(self):
         self.FRAME_GENERATOR = self.createFrameGenerator()
