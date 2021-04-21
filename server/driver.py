@@ -31,7 +31,6 @@ from SLAM import *
 
 np.random.seed(1)
 
-
 class Driver:
     def __init__(self):
         #####################
@@ -55,8 +54,7 @@ class Driver:
                 'associate': True,
                 'depth_factor': 5000,
                 'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
-                # [0.2624, -0.9531, -0.0054, 0.0026, 1.1633],
-                'dist_coff': None,
+                'dist_coff': None, #[0.2624, -0.9531, -0.0054, 0.0026, 1.1633],
             },
             2: {
                 'directory': os.path.join('datasets', 'fr1_rpy'),
@@ -64,8 +62,7 @@ class Driver:
                 'associate': True,
                 'depth_factor': 5000,
                 'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
-                # [0.2624, -0.9531, -0.0054, 0.0026, 1.1633],
-                'dist_coff': None,
+                'dist_coff': None, #[0.2624, -0.9531, -0.0054, 0.0026, 1.1633],
             },
             3: {
                 'directory': os.path.join('datasets', 'fr2_pslam'),
@@ -73,8 +70,7 @@ class Driver:
                 'associate': True,
                 'depth_factor': 5000,
                 'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
-                # [0.2312, -0.7849, -0.0033, -0.0001, 0.9172],
-                'dist_coff': None,
+                'dist_coff': None, #[0.2312, -0.7849, -0.0033, -0.0001, 0.9172],
             },
             4: {
                 'directory': os.path.join('datasets', 'trajectory220'),
@@ -86,6 +82,7 @@ class Driver:
             },
         }
 
+    
     def createFrameGenerator(self):
 
         directory = self.metadata[self.DATASET]['directory']
@@ -121,7 +118,7 @@ class Driver:
                 img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
                 if hasDepth:
                     depth = np.loadtxt(depthFile, delimiter=",",
-                                       dtype=np.float64) * 1000.0
+                                    dtype=np.float64) * 1000.0
                     # depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
                     yield img, depth
                 else:
