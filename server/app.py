@@ -7,6 +7,7 @@ import threading
 
 driver = Driver()
 driverThread = threading.Thread(target=driver.doSlam)
+driverThread.start()
 
 def get_map_frame():
     frame = driver.slamAlgorithm.getMap()
@@ -37,7 +38,6 @@ def index():
 
 @app.route('/outputs')
 def outputs():
-    driverThread.start()
     return render_template('outputs.html')
 
 @app.route('/mapping')
