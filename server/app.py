@@ -7,6 +7,7 @@ import threading
 
 driver = Driver()
 driverThread = threading.Thread(target=driver.doSlam)
+driverThread.daemon = True
 driverThread.start()
 
 def get_map_frame():
