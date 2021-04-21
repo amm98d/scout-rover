@@ -7,10 +7,9 @@ import threading
 
 driver = Driver()
 driverThread = threading.Thread(target=driver.doSlam)
-driverThread.start()
 
 def get_map_frame():
-    frame = driver.slamAlgorithm.map
+    frame = driver.slamAlgorithm.getMap()
     ret, jpeg = cv2.imencode('.jpg', frame)
     return jpeg.tobytes()
 
@@ -38,6 +37,7 @@ def index():
 
 @app.route('/outputs')
 def outputs():
+    driverThread.start()
     return render_template('outputs.html')
 
 @app.route('/mapping')

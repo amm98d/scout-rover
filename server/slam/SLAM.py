@@ -62,6 +62,12 @@ class SLAM:
         # Log-Probabilities to add or remove from the map
         self.l_occ = np.log(0.65/0.35)
         self.l_free = np.log(0.35/0.65)
+        self.imagingQ = []
+
+    def getMap(self):
+        if len(self.imagingQ)==1:
+            return self.imagingQ[0]
+        return self.imagingQ.pop(0)
 
     def process(self, images, depths, iterator):
         print(f"Processsing frame {iterator}")
@@ -136,11 +142,12 @@ class SLAM:
         self.draw_trail()
         self.draw_map_points(map_points, 0)
         self.draw_robot(robot_points, 0, 1)
+        self.imagingQ.append(np.copy(self.map))
 
-        cv.imshow('Map', self.map)
+        # cv.imshow('Map', self.map)
         # cv.imshow('Log Map', self.log_prob_map)
         # cv.imshow('Log Map', 1.0 - 1./(1.+np.exp(self.log_prob_map)))
-        matches = visualize_camera_movement(
+        self.matches = visualize_camera_movement(
             images[0], image1_points, images[1], image2_points)
         # cv.imshow('Image', matches)
         cv.waitKey(20)

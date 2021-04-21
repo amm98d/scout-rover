@@ -135,42 +135,6 @@ class Driver:
         # READ FRAMES END
         #####################
 
-    def sift_features(self, image):
-        features = []
-        sift = cv.xfeatures2d.SIFT_create()
-        (kp, des) = sift.detectAndCompute(image,None)
-        print()
-        print("kp.shape",len(kp))
-        print("des.shape",des.shape)
-        # features.append((kp, des))
-        # sift_vectors[key] = features
-        # return [descriptor_list, sift_vectors]
-
-    def doDataAssociation(self):
-        self.FRAME_GENERATOR = self.createFrameGenerator()
-
-        frameA,_ = self.getFrame(self.FRAME_GENERATOR)
-        frameB,_ = self.getFrame(self.FRAME_GENERATOR)
-        images = [frameA, frameB]
-
-        # sift features
-        # create histograms
-
-        #####################
-        # READ FRAMES END
-        #####################
-
-        i = 2
-        while True:
-            self.slamAlgorithm.process(images)
-            # Update Measurements
-            frameA = np.copy(frameB)
-            frameB,_ = self.getFrame(self.FRAME_GENERATOR)
-            if np.isscalar(frameB) or i > 1000:
-                break
-            images = [frameA, frameB]
-            i += 1
-
     def doSlam(self):
         self.FRAME_GENERATOR = self.createFrameGenerator()
 
@@ -208,3 +172,5 @@ class Driver:
 
         # poses = self.slamAlgorithm.get_robot_poses()
         # visualize_data(plot_robot_poses, True, True, f"poses", poses)
+
+# Driver().doSlam()
