@@ -1,5 +1,3 @@
-# external modules
-from SLAM import *
 import socket
 import os
 from platform import platform
@@ -28,6 +26,8 @@ import sys
 sys.path.append("../common/")
 sys.path.append("./slam/")
 # from NetworkHandler import *
+# external modules
+from SLAM import *
 
 np.random.seed(1)
 
