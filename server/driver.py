@@ -124,7 +124,7 @@ class Driver:
                     yield img, -1
 
     def saveMap(self):
-        filePath = os.path.join(os.environ["USERPROFILE"], "Desktop", "FinalMap.png")
+        filePath = os.path.join(os.environ["USERPROFILE"], "Desktop", "Map.png")
         print()
         print(f'Saving Map at {filePath}')
         if cv.imwrite(filePath, self.slamAlgorithm.getMap()):
