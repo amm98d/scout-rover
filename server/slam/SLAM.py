@@ -141,7 +141,7 @@ class SLAM:
         # self.update_map(map_points)
         self.trail.append((robot_points[1], robot_points[2]))
         self.draw_trail()
-        self.draw_map_points(map_points, 0)
+        self.draw_map_points(map_points, 1)
         self.draw_robot(robot_points, 0, 1)
         self.imagingQ.append(np.copy(self.map))
 
