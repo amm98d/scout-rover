@@ -124,9 +124,13 @@ class Driver:
                     yield img, -1
 
     def saveMap(self):
-        os.path.join(os.environ["HOMEPATH"], "Desktop")
+        filePath = os.path.join(os.environ["USERPROFILE"], "Desktop", "FinalMap.png")
         print()
-        print('SAVING MAP')
+        print(f'Saving Map at {filePath}')
+        if cv.imwrite(filePath, self.slamAlgorithm.getMap()):
+            print(f'Map saved')
+        else:
+            print('Map could not be saved')
 
     def getFrame(self, FRAME_GENERATOR):
         for i in FRAME_GENERATOR:
@@ -164,10 +168,12 @@ class Driver:
             frameA = np.copy(frameB)
             depthA = np.copy(depthB)
             frameB, depthB = self.getFrame(self.FRAME_GENERATOR)
-            if np.isscalar(frameB) or i > 1000:
+            if np.isscalar(frameB) or i > 500:
                 break
             images = [frameA, frameB]
             depths = [depthA, depthB]
+        
+        print('Mapping Completed')
 
         # trajectory = self.slamAlgorithm.get_trajectory()
         # visualize_data(visualize_trajectory, True, True, "3D", trajectory)

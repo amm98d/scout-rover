@@ -16,7 +16,7 @@ def get_map_frame():
     return jpeg.tobytes()
 
 def get_video_frame():
-    frame = driver.slamAlgorithm.matches
+    frame = driver.slamAlgorithm.matchviz
     ret, jpeg = cv2.imencode('.jpg', frame)
     return jpeg.tobytes()
 
