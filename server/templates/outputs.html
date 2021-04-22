@@ -28,6 +28,9 @@
             &nbsp;&nbsp;<img class="d-inline-block align-top" height="35" src="{{url_for('static',filename='images/logo.svg')}}">
             &nbsp;<span style="font-size: 25px; font-weight: 400;"> Scout Rover </span>
         </a>
+        <div>
+            <button type="button" class="btn btn-outline-light saveMap"> Save Map </button> &nbsp;&nbsp;&nbsp;&nbsp;
+        </div>
     </nav>
 
     <div class="container ">
@@ -53,7 +56,14 @@
             </div>
         </div>
     </div>
-
+    <script>
+        $('.saveMap').click(function() {
+            $.ajax({
+                url: "/save",
+                method: "GET",
+            });
+        });
+    </script>
 </body>
 
 </html>

@@ -39,7 +39,7 @@ def index():
 
 @app.route('/outputs')
 def outputs():
-    return render_template('outputs.html')
+    return render_template('outputs.html', disabled=True)
 
 @app.route('/mapping')
 def mapping():
@@ -48,6 +48,11 @@ def mapping():
 @app.route('/video')
 def video():
     return Response(genVideo(),mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/save')
+def save():
+    driver.saveMap()
+    return ""
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port='5000')

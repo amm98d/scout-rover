@@ -123,6 +123,11 @@ class Driver:
                 else:
                     yield img, -1
 
+    def saveMap(self):
+        os.path.join(os.environ["HOMEPATH"], "Desktop")
+        print()
+        print('SAVING MAP')
+
     def getFrame(self, FRAME_GENERATOR):
         for i in FRAME_GENERATOR:
             return i
@@ -169,5 +174,3 @@ class Driver:
 
         # poses = self.slamAlgorithm.get_robot_poses()
         # visualize_data(plot_robot_poses, True, True, f"poses", poses)
-
-# Driver().doSlam()
