@@ -13,11 +13,21 @@ def compress_nparr(nparr):
 
 app = Flask(__name__)
 
-@app.route('/video_feed')
-def video_feed():
-    (_,_), (rgb,_) = get_depth(), get_video()
+@app.route('/rgb')
+def rgb():
+    print("RGB RECEIVED")
+    (rgb,_) = get_video()
     rgb_bytes = compress_nparr(rgb)[0]
     response = make_response(rgb_bytes)
+    response.headers.set('Content-Type', 'application/octet-stream')
+    return response
+
+@app.route('/depth')
+def depth():
+    print("DEPTH RECEIVED")
+    (depth,_) = get_depth()
+    depth_bytes = compress_nparr(depth)[0]
+    response = make_response(depth_bytes)
     response.headers.set('Content-Type', 'application/octet-stream')
     return response
 
