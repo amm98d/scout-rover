@@ -2,6 +2,7 @@ from freenect import sync_get_depth as get_depth, sync_get_video as get_video
 from flask import Flask, render_template, make_response
 import io
 import zlib
+import numpy as np
 
 def compress_nparr(nparr):
     bytestream = io.BytesIO()
