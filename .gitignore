@@ -341,5 +341,7 @@ Thumbs.db
 # profiling data
 .prof
 
+# saves folder created by kinect
+server/saves/
 
 # End of https://www.toptal.com/developers/gitignore/api/flask
