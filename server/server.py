@@ -4,7 +4,7 @@ from time import sleep
 import os
 from platform import platform
 import urllib.request
-import fpstimer
+# import fpstimer
 import select
 import sys
 # import tty
@@ -13,13 +13,17 @@ import numpy as np
 import cv2
 import io
 import zlib
+import msvcrt
 
 # internal modules
 import sys
-sys.path.append("./common/")
-sys.path.append("./server/slam/")
+sys.path.append("../common/")
+sys.path.append("./slam/")
 from NetworkHandler import *
 from SLAM import *
+
+# global variables
+SERVER_ENV = 'Windows'
 
 class Server:
     """
@@ -50,48 +54,45 @@ class Server:
 
     # for non-blocking user controlled movement of rover
     def _check_interrupts(self):
-        k = input("Command")
-        if k == 'w':
-            NetworkHandler().send(b'w',self.connection)
-            print("up")
-        elif k == 's':
-            NetworkHandler().send(b's',self.connection)
-            print("down")
-        elif k == 'd':
-            NetworkHandler().send(b'd',self.connection)
-            print("right")
-        elif k == 'a':
-            NetworkHandler().send(b'a',self.connection)
-            print("left")
-        elif k == 'x':
-            NetworkHandler().send(b' ',self.connection)
-            print('brakes')
-        if k == 'q':
-            print("Esc")
-            return False
-        else:
-            return True
-        # if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
-        #     k = sys.stdin.read(1)
-        #     if ord(k) == 119:
-        #         NetworkHandler().send(b'w',self.connection)
-        #         print("up")
-        #     elif ord(k) == 115:
-        #         NetworkHandler().send(b's',self.connection)
-        #         print("down")
-        #     elif ord(k) == 100:
-        #         NetworkHandler().send(b'd',self.connection)
-        #         print("right")
-        #     elif ord(k) == 97:
-        #         NetworkHandler().send(b'a',self.connection)
-        #         print("left")
-        #     elif ord(k) == 32:
-        #         NetworkHandler().send(b' ',self.connection)
-        #         print('brakes')
-        #     elif ord(k) == 27:
-        #         print("Esc")
-        #         return False
-        # return True
+        """Non-Blocking Console Input for three different Server Environments:
+            - 'LocalTemp': Blocking Input for development purposes
+            - 'Windows': Non-blocking windows input using msvcrt
+            - 'Linux': Non-blocking linux input using termios
+        Returns:
+            bool: False if Esc Key Pressed
+        """
+        isInput = False
+        if SERVER_ENV=='LocalTemp':
+            k = input("Command")
+            isInput = True
+        elif SERVER_ENV=='Linux':
+            if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+                k = sys.stdin.read(1)
+                isInput = True
+        elif SERVER_ENV=='Windows':
+            if msvcrt.kbhit():
+                k = msvcrt.getch()
+                isInput = True
+        if isInput:
+            if ord(k) == 119:
+                NetworkHandler().send(b'w',self.connection)
+                print("up")
+            elif ord(k) == 115:
+                NetworkHandler().send(b's',self.connection)
+                print("down")
+            elif ord(k) == 100:
+                NetworkHandler().send(b'd',self.connection)
+                print("right")
+            elif ord(k) == 97:
+                NetworkHandler().send(b'a',self.connection)
+                print("left")
+            elif ord(k) == 32:
+                NetworkHandler().send(b' ',self.connection)
+                print('brakes')
+            elif ord(k) == 27:
+                print("Esc")
+                return False
+        return True
 
     def _takeMeasurements(self):
         byte_array = urllib.request.urlopen('http://192.168.100.113:5000/video_feed').read()
@@ -109,9 +110,11 @@ class Server:
         print(" ==> Press Esc Key to exit.")
         print("-------------------------------------------------------------------")
 
-        # old_settings = termios.tcgetattr(sys.stdin)
+        if SERVER_ENV=='Linux':
+            old_settings = termios.tcgetattr(sys.stdin)
         try:
-            # tty.setcbreak(sys.stdin.fileno())
+            if SERVER_ENV=='Linux':
+                tty.setcbreak(sys.stdin.fileno())
 
             # Take Initialize Measurements
             # frame_A = self._takeMeasurements()
@@ -120,17 +123,18 @@ class Server:
 
             # timer = fpstimer.FPSTimer(60)
             while(True):
-                frame = self._takeMeasurements()
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                cv2.imshow('frame',gray)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                # frame = self._takeMeasurements()
+                # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                # cv2.imshow('frame',gray)
 
                 # checking for user interrupts
-                # if self._check_interrupts() == False:
-                    # break
+                if SERVER_ENV=='Linux':
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+                if self._check_interrupts() == False:
+                    break
 
-                # SLAMMING
+                ## SLAMMING
                 # self.slamAlgorithm.process(images)
 
                 # Update Measurements
@@ -144,9 +148,13 @@ class Server:
         finally:
             pass
             # cv.destroyAllWindows()
-            # termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            if SERVER_ENV=='Linux':
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
     def _clearScreen(self):
+        """
+            Clears the console. Intelligently recongizes host os between Windows and Linux.
+        """
         if platform() == "Windows-10-10.0.19041-SP0":
             os.system("cls")
         else:

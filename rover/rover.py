@@ -11,7 +11,8 @@ import subprocess
 
 # internal modules
 import sys
-sys.path.append("/etc/scout/scout-rover/common/")
+sys.path.append("../common/")
+# sys.path.append("/etc/scout/scout-rover/common/")
 from NetworkHandler import *
 
 class Rover:
@@ -29,10 +30,10 @@ class Rover:
                 - calls listen()
         """
         try:
-            #self.bluetooth_port = serial.Serial('/dev/rfcomm0',9600)
+            self.bluetooth_port = serial.Serial('/dev/rfcomm0',9600)
             self.rover_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.rover_socket.connect((ip,port))
-            self.flask_server = subprocess.Popen(['python3', 'rover/flask-server.py'])
+            #self.flask_server = subprocess.Popen(['python3', 'rover/flask-server.py'])
             self.messagesListenerThread = threading.Thread(target=self.handle_incoming_messages)
             self.messagesListenerThread.start()
             self.messagesListenerThread.join()
@@ -47,7 +48,7 @@ class Rover:
             message = NetworkHandler().receive(self.rover_socket)
             if message:
                 print(message)
-                #self.bluetooth_port.write(message)
+                self.bluetooth_port.write(message)
             else:
                 return
 
@@ -58,11 +59,10 @@ class Rover:
         try:
             if self.rover_socket is not None:
                 self.rover_socket.close()
-            # if self.bluetooth_port is not None:
-            #     self.bluetooth_port.close()
+            if self.bluetooth_port is not None:
+                self.bluetooth_port.close()
         except Exception as e:
             print(e)
 
 rover = Rover()
 rover.start()
-
