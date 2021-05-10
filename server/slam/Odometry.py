@@ -88,6 +88,7 @@ def visualize_matches(image1, kp1, image2, kp2, match):
         image1, kp1, image2, kp2, match, None, flags=2)
     plt.figure(figsize=(16, 6), dpi=100)
     plt.imshow(image_matches)
+    plt.show()
 
 
 def visualize_camera_movement(
@@ -137,7 +138,7 @@ def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
         p2_z = depth_map[int(p2_y), int(p2_x)]
         w1_x, w1_y, w1_z = point2Dto3D((p1_x, p1_y), p1_z, k, depth_factor)
         w2_x, w2_y, w2_z = point2Dto3D((p2_x, p2_y), p2_z, k, depth_factor)
-        if w1_z > 0 and w1_z < 1000:
+        if w1_z > 0 and w1_z < 20:
             used_matches.append(m)
             image1_points.append([p1_x, p1_y])
             image2_points.append([p2_x, p2_y])
@@ -149,8 +150,14 @@ def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
     image1_points = np.array(image1_points).astype('double')
     image2_points = np.array(image2_points).astype('double')
 
-    _, rvec, tvec, inliers = cv.solvePnPRansac(
-        cloud1_points, image2_points, k, dist_coff, flags=cv.SOLVEPNP_EPNP)
+    try:
+        _, rvec, tvec, inliers = cv.solvePnPRansac(
+            cloud1_points, image2_points, k, dist_coff, flags=cv.SOLVEPNP_EPNP)
+        inliers.shape
+    except Exception as e:
+        print(
+            f'\tsolvePnPRansac exception occured. Good points: {len(image2_points)}')
+        return []
 
     inliers = inliers.flatten()
     used_matches = np.take(used_matches, inliers, 0)
@@ -161,7 +168,7 @@ def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
 
     rmat, _ = cv.Rodrigues(rvec)
 
-    return rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, len(inliers)
+    return [rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, len(inliers)]
 
 
 def em_estimation(match, kp1, kp2, k):
@@ -194,50 +201,27 @@ def em_estimation(match, kp1, kp2, k):
     return rmat, tvec, image1_points, image2_points
 
 
-# def estimate_trajectory(estimate_motion, matches, kp_list, k, P, depth_map=[]):
-
-#     for i in range(len(matches)):
-#         match = matches[i]
-#         kp1 = kp_list[i]
-#         kp2 = kp_list[i + 1]
-
-#         rmat, tvec, _, _ = estimate_motion(
-#             match, kp1, kp2, k)
-#         if np.isscalar(rmat):
-#             print("estimate trajectory: NO RMAT, TVEC")
-#             return P, -1, -1
-#         rt_mtx = np.hstack([rmat, tvec])
-#         rt_mtx = np.vstack([rt_mtx, np.zeros([1, 4])])
-#         rt_mtx[-1, -1] = 1
-
-#         rt_mtx_inv = np.linalg.inv(rt_mtx)
-
-#         P = np.dot(P, rt_mtx_inv)
-
-#     return P, rmat, tvec
-
 def estimate_trajectory(matches, kp_list, k, dist_coff, P, depth_map, depth_factor):
 
     kp1 = kp_list[0]
     kp2 = kp_list[1]
 
-    if not np.isscalar(depth_map):
-        rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, inliersCount = pnp_estimation(
-            matches, kp1, kp2, k, dist_coff, depth_map, depth_factor)
-    else:
-        rmat, tvec, image1_points, image2_points = em_estimation(
-            matches, kp1, kp2, k)
+    # Try Feature Tracking
+    pnpRes = pnp_estimation(
+        matches, kp1, kp2, k, dist_coff, depth_map, depth_factor)
 
-    if np.isscalar(rmat):
-        print("estimate trajectory: NO RMAT, TVEC")
-        return P, -1, -1
+    if len(pnpRes) == 0:
+        return []
 
-    rt_mtx = np.hstack([rmat, tvec])
-    rt_mtx = np.vstack([rt_mtx, np.zeros([1, 4])])
-    rt_mtx[-1, -1] = 1
+    rmat, tvec = pnpRes[:2]
 
-    rt_mtx_inv = np.linalg.inv(rt_mtx)
+    # Create tmat from rmat and tvec
+    tmat = np.hstack([rmat, tvec])
+    tmat = np.vstack([tmat, np.array([0, 0, 0, 1])])
+    tmat_inv = np.linalg.inv(tmat)
 
-    P = np.dot(P, rt_mtx_inv)
+    # Concatenate Transformation Matrix
+    P = np.dot(P, tmat_inv)
+    pnpRes.insert(0, P)
 
-    return P, rmat, tvec, image1_points, image2_points, cloud1_points, cloud2_points, used_matches, inliersCount
+    return pnpRes

@@ -35,7 +35,7 @@ np.random.seed(1)
 #####################
 # READ FRAMES START
 #####################
-DATASET = 0
+DATASET = 3
 NUM_FRAMES = -1
 
 metadata = {
@@ -87,6 +87,14 @@ metadata = {
         'camera_matrix': [[827.0, 0, 638.0], [0, 826.0, 347.0], [0, 0, 1.0]],
         'dist_coff': None,
     },
+    6: {
+        'directory': os.path.join('datasets', 'amm_1'),
+        'depth': True,
+        'associate': False,
+        'depth_factor': 5000,
+        'camera_matrix': [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]],
+        'dist_coff': None,
+    },
 }
 
 
@@ -124,9 +132,11 @@ def createFrameGenerator():
         for rgbFile, depthFile in zip(rgbFileNames, depthFileNames):
             img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
             if hasDepth:
-                depth = np.loadtxt(depthFile, delimiter=",",
-                                   dtype=np.float64) * 1000.0
-                # depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
+                if depthFile.endswith('.dat'):
+                    depth = np.loadtxt(depthFile, delimiter=",",
+                                    dtype=np.float64) * 1000.0
+                elif depthFile.endswith('.png'):
+                    depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
                 yield img, depth
             else:
                 yield img, -1
@@ -151,29 +161,38 @@ def getFrame():
 depthFactor = metadata[DATASET]['depth_factor']
 camera_matrix = metadata[DATASET]['camera_matrix']
 dist_coff = metadata[DATASET]['dist_coff']
-slamAlgorithm = SLAM(depthFactor, camera_matrix, dist_coff)
 
-frameA, depthA = getFrame()
-frameB, depthB = getFrame()
-images = [frameA, frameB]
-depths = [depthA, depthB]
+startIdx = 1
+i = 0
 
-i = 2
+# Skip initial frames (if needed)
+while i < startIdx:
+    img, depth = getFrame()
+    i += 1
+
+slamAlgorithm = SLAM(img, depth, depthFactor, camera_matrix, dist_coff)
 while True:
+
+    img, depth = getFrame()
     # SLAMMING
-    if i > 1:
-        slamAlgorithm.process(images, depths, i)
-        # cv.waitKey(2000)
+    slamAlgorithm.process(img, depth, i)
+    # cv.waitKey(2000)
     i += 1
 
     # Update Measurements
-    frameA = np.copy(frameB)
-    depthA = np.copy(depthB)
-    frameB, depthB = getFrame()
-    if np.isscalar(frameB) or i > 1000:
+    if np.isscalar(img) or i > 1500:
         break
-    images = [frameA, frameB]
-    depths = [depthA, depthB]
+
+ops = np.array(slamAlgorithm.open_points)
+plt.scatter(ops[:, 0], ops[:, 1], c='#00ff00', alpha=1.0, s=1)
+mps = np.array(slamAlgorithm.map_points)
+plt.scatter(mps[:, 0], mps[:, 1], c='#000000', alpha=1.0, s=1)
+ax = plt.gca()
+ax.set_aspect('equal', 'box')
+xLims = ax.get_xlim()
+yLims = ax.get_ylim()
+plt.savefig(f"dataviz/map.png")
+slamAlgorithm.makeLogProbs(xLims, yLims)
 
 trajectory = slamAlgorithm.get_trajectory()
 visualize_data(visualize_trajectory, True, True, "3D", trajectory)
