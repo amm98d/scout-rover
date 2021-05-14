@@ -162,7 +162,7 @@ depthFactor = metadata[DATASET]['depth_factor']
 camera_matrix = metadata[DATASET]['camera_matrix']
 dist_coff = metadata[DATASET]['dist_coff']
 
-startIdx = 1
+startIdx = 500
 i = 0
 
 # Skip initial frames (if needed)
@@ -173,11 +173,14 @@ while i < startIdx:
 slamAlgorithm = SLAM(img, depth, depthFactor, camera_matrix, dist_coff)
 while True:
 
-    img, depth = getFrame()
+    newImg, newDepth = getFrame()
     # SLAMMING
-    slamAlgorithm.process(img, depth, i)
+    slamAlgorithm.process([img, newImg], [depth, newDepth], i)
     # cv.waitKey(2000)
     i += 1
+
+    img = newImg
+    depth = newDepth
 
     # Update Measurements
     if np.isscalar(img) or i > 1500:

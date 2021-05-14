@@ -11,6 +11,7 @@ import glob
 import cv2 as cv
 import multiprocessing
 import grid_map_utils as gmu
+import open3d as o3d
 # import scipy.io
 # import scipy.stats
 
@@ -21,6 +22,10 @@ class SLAM:
         self.P = np.eye(4)  # Pose
         self.k = np.array(
             camera_matrix, dtype=np.float32,
+        )
+        self.ki = o3d.camera.PinholeCameraIntrinsic()
+        self.ki.set_intrinsics(
+            640, 480, 525., 525., 319.5, 239.5
         )
         self.dist_coff = np.array(
             dist_coff, dtype=np.float32,
@@ -61,9 +66,13 @@ class SLAM:
         self.keyframes = [frame]
         cv.imwrite(f'dataviz/kfs/1.png', img)
 
-    def process(self, img, depth, iterator):
+        self.prev_pc = None
+        self.o3vis = o3d.visualization.Visualizer()
+        self.o3vis.create_window()
+
+    def process(self, imgs, depths, iterator):
         print(f"Processsing frame {iterator}")
-        curr_frame = Frame(img, iterator)
+        curr_frame = Frame(imgs[1], iterator)
         prev_frame = self.frames[-1]
 
         des_list = [prev_frame.des, curr_frame.des]
@@ -78,7 +87,7 @@ class SLAM:
 
         # Part II. Trajectory Estimation
         trajRes = estimate_trajectory(
-            matches, kp_list, self.k, self.dist_coff, self.P, depth, self.depthFactor)
+            matches, kp_list, self.k, self.dist_coff, self.P, depths[1], self.depthFactor)
 
         if len(trajRes) == 0:
             print(f'\t->->Trajectory estimation failed!')
@@ -93,32 +102,19 @@ class SLAM:
             print(f"\t->->Frame filtered because isSame: {move_mean}")
             return
 
-        # Part III. Check Keyframe candidate
-        # prev_keyframe = self.keyframes[-1]
-        # des_list = [prev_keyframe.des, curr_frame.des]
-        # kp_list = [prev_keyframe.kp, curr_frame.kp]
-        # matches = match_features(des_list)
-        # matches = filter_matches(matches)
-        # trajRes = estimate_trajectory(
-        #     matches, kp_list, self.k, self.dist_coff, self.P, depth, self.depthFactor)
-        # if len(trajRes) == 0 or trajRes[-1] < 5:
-        #     print(f'\tKeyframe detected!')
-        #     cv.imwrite(f'dataviz/kfs/{iterator}.png', img)
-        #     print('\tMatching with all prev keyframes...')
-        #     for keyframe in self.keyframes:
-        #         des_list = [keyframe.des, curr_frame.des]
-        #         kp_list = [keyframe.kp, curr_frame.kp]
-        #         matches = match_features(des_list)
-        #         matches = filter_matches(matches)
-        #         trajRes = estimate_trajectory(
-        #             matches, kp_list, self.k, self.dist_coff, self.P, depth, self.depthFactor)
-        #         if len(trajRes) > 0:
-        #             print(f'\tLoop closure candidate: {keyframe.frame_nbr}')
-        #             loopfp = f'dataviz/kfs/{keyframe.frame_nbr}.png'
-        #             loopimg = cv.imread(loopfp, cv.IMREAD_UNCHANGED)
-        #             visualize_matches(
-        #                 loopimg, kp_list[0], img, kp_list[1], matches)
-        #     self.keyframes.append(curr_frame)
+        threshold = 0.02
+        trans_init = self.P
+        source = self.prev_pc
+        target = self.create_pc(depths[1])
+        if target:
+            if not source:
+                source = target
+            reg_p2p = o3d.pipelines.registration.registration_icp(
+                source, target, threshold, trans_init,
+                o3d.pipelines.registration.TransformationEstimationPointToPoint())
+            self.P = reg_p2p.transformation
+            self.draw_registration_result(source, target, reg_p2p.transformation)
+            self.prev_pc = target
 
         self.tMats.append((rmat, tvec))
         new_trajectory = self.P[:3, 3]
@@ -129,17 +125,18 @@ class SLAM:
 
         # Visualize traj
         map_points = self.calc_map_points(
-            depth, curr_pose[2], curr_pose[0:2], self.MAP_SCALE)
+            depths[1], curr_pose[2], curr_pose[0:2], self.MAP_SCALE)
         self.map_points.extend(map_points[1])
         self.open_points.extend(map_points[2])
 
+        self.draw_dummy_points(depths[1], 1)
         # cv.imshow('Log Map', self.log_prob_map)
         # cv.imshow('Log Map', 1.0 - 1./(1.+np.exp(self.log_prob_map)))
-        matches = visualize_camera_movement(
-            img, image1_points, img, image2_points)
-        cv.imshow('Image', matches)
-        cv.imshow('Map', self.map)
-        cv.waitKey(20)
+        # matches = visualize_camera_movement(
+        #     img, image1_points, img, image2_points)
+        # cv.imshow('Image', matches)
+        # cv.imshow('Map', self.map)
+        # cv.waitKey(20)
 
         # if iterator % 10 == 0:
         #     cv.imwrite(f'dataviz/pic{iterator}.png', images[1])
@@ -155,142 +152,98 @@ class SLAM:
 
         self.frames.append(curr_frame)
 
-    def depth_to_lidar(self, map_points):
-        angles = []
-        distances = []
-
-        originX, originY = map_points[0]
-        for point in map_points[1]:
-            X, Y = point
-            bearing = math.atan2(Y-originY, X-originX)
-            distance = Y
-
-            angles.append(bearing)
-            distances.append(distance)
-
-        return np.array(angles), np.array(distances)
-
-    def update_map(self, map_points):
-        for cp in map_points[1]:
-            px, py = cp
-            px -= px % self.CELL_SIZE
-            py -= py % self.CELL_SIZE
-            self.log_prob_map[py:py+self.CELL_SIZE,
-                              px:px+self.CELL_SIZE] += self.l_occ
-        for op in map_points[2]:
-            px, py = op
-            px -= px % self.CELL_SIZE
-            py -= py % self.CELL_SIZE
-            self.log_prob_map[py:py+self.CELL_SIZE,
-                              px:px+self.CELL_SIZE] += self.l_free
-
     def get_trajectory(self):
         return np.array(self.trajectory).T
 
     def get_robot_poses(self):
         return self.poses
 
-    def calc_robot_points(self, curr_pose, offsets, scales):
-        X_OFFSET, Y_OFFSET = offsets
-        X_SCALE, Y_SCALE = scales
-        X_RADIUS, Y_RADIUS = self.ROVER_DIMS[1] / 2, self.ROVER_DIMS[0] / 2
+    def draw_registration_result(self, source, target, transformation):
+        source.paint_uniform_color([1, 0.706, 0])
+        target.paint_uniform_color([0, 0.651, 0.929])
+        source.transform(transformation)
+        o3d.visualization.draw_geometries([source, target])
 
-        originX = int(curr_pose[0] * X_SCALE + X_OFFSET)
-        originY = self.MAP_SIZE - int(curr_pose[1] * Y_SCALE + Y_OFFSET)
+    def create_pc(self, depth):
+        points = []
+        for col in range(0, depth.shape[1], 10):
+            nonZeroVals = [
+                (val, i)
+                for i, val in enumerate(depth[self.VALID_DRANGE[0]:self.VALID_DRANGE[1], col])
+                if val > 0
+            ]
+            if len(nonZeroVals):
+                Z, row = min(nonZeroVals, key=lambda i: i[0])
+                X, Y, Z = point2Dto3D((col, row), Z, self.k, self.depthFactor)
+                if Z > 0 and Z < 4:
+                    points.append([X, Y, Z, 1])
 
-        thetaX = int(originX + Y_RADIUS * math.cos(-curr_pose[2]))
-        thetaY = int(originY + Y_RADIUS * math.sin(-curr_pose[2]))
+        if len(points):
+            tPoints = np.array(points).T
+            tPoints[1, :] = tPoints[2, :]
+            tPoints[2, :] = 0
+            tPoints = tPoints[0:3].T
 
-        FOV = math.radians(60)  # 57 degrees original value
-        VRANGE = 300  # 100px -> 1m
-        ang1 = curr_pose[2] - FOV / 2
-        ang2 = curr_pose[2] + FOV / 2
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(tPoints)
 
-        line1X = int(originX + VRANGE * math.cos(-ang1))
-        line1Y = int(originY + VRANGE * math.sin(-ang1))
-        line2X = int(originX + VRANGE * math.cos(-ang2))
-        line2Y = int(originY + VRANGE * math.sin(-ang2))
+            return pcd
 
-        p1x = originX - X_RADIUS
-        p1y = originY - Y_RADIUS
-        p2x = originX + X_RADIUS
-        p2y = originY - Y_RADIUS
-        p3x = originX + X_RADIUS
-        p3y = originY + Y_RADIUS
-        p4x = originX - X_RADIUS
-        p4y = originY + Y_RADIUS
+        return None
 
-        # Rotate all points
-        p1x, p1y = self.rotate_point(
-            (p1x, p1y), (originX, originY), curr_pose[2])
-        p2x, p2y = self.rotate_point(
-            (p2x, p2y), (originX, originY), curr_pose[2])
-        p3x, p3y = self.rotate_point(
-            (p3x, p3y), (originX, originY), curr_pose[2])
-        p4x, p4y = self.rotate_point(
-            (p4x, p4y), (originX, originY), curr_pose[2])
+    def intensity_estimation(self, imgs, depths):
+        source_color = o3d.geometry.Image(imgs[0])
+        source_depth = o3d.geometry.Image(depths[0])
+        target_color = o3d.geometry.Image(imgs[1])
+        target_depth = o3d.geometry.Image(depths[1])
+        source_rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
+            source_color, source_depth, depth_scale=5000, depth_trunc=4)
+        target_rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
+            target_color, target_depth, depth_scale=5000, depth_trunc=4)
+        target_pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
+            target_rgbd_image, self.ki)
 
-        boxPoints = np.array([[p1x, p1y], [p2x, p2y], [p3x, p3y], [
-            p4x, p4y]], dtype=np.int32)
+        option = o3d.pipelines.odometry.OdometryOption()
+        odo_init = self.P
 
-        return [boxPoints, originX, originY, thetaX, thetaY, line1X, line1Y, line2X, line2Y]
+        [success_hybrid_term, trans_hybrid_term,
+        info] = o3d.pipelines.odometry.compute_rgbd_odometry(
+            source_rgbd_image, target_rgbd_image, self.ki, odo_init,
+            o3d.pipelines.odometry.RGBDOdometryJacobianFromHybridTerm(), option)
 
-    def rotate_point(self, point, origin, angle):
-        px = point[0] - origin[0]
-        py = point[1] - origin[1]
-        rotX = px * math.cos(angle) + py * math.sin(angle)
-        rotY = py * math.cos(angle) - px * math.sin(angle)
-        rotX += origin[0]
-        rotY += origin[1]
-
-        return rotX, rotY
-
-    def draw_robot(self, robot_points, addFOV=1, shouldDraw=1, roverType='SQUARE'):
-        ROVER_COLOR = self.MAP_COLOR['occupied'] if shouldDraw else self.MAP_COLOR['open']
-
-        # FOV
-        if addFOV:
-            FOV_WIDTH = 2
-            FOV_COLOR = self.MAP_COLOR['fov'] if shouldDraw else self.MAP_COLOR['unexplored']
-            cv.line(
-                self.map,
-                (robot_points[1], robot_points[2]),
-                (robot_points[5], robot_points[6]),
-                FOV_COLOR,
-                FOV_WIDTH,
-            )
-            cv.line(
-                self.map,
-                (robot_points[1], robot_points[2]),
-                (robot_points[7], robot_points[8]),
-                FOV_COLOR,
-                FOV_WIDTH,
-            )
-
-        if roverType == 'SQUARE':
-            rect = cv.minAreaRect(robot_points[0])
-            box = cv.boxPoints(rect)
-            box = np.int0(box)
-            cv.fillPoly(self.map, [box], ROVER_COLOR)  # filled
-            # cv.drawContours(self.map, [box], 0, ROVER_COLOR, 2) #unfilled
+        if success_hybrid_term:
+            return [trans_hybrid_term]
         else:
-            cv.circle(
-                self.map,
-                (robot_points[1], robot_points[2]),
-                self.ROVER_DIMS[-1],
-                ROVER_COLOR,
-                -1,
-            )
+            return []
 
-        # ROVER DIRECTION
-        if shouldDraw:
-            cv.line(
-                self.map,
-                (robot_points[1], robot_points[2]),
-                (robot_points[3], robot_points[4]),
-                self.MAP_COLOR['fov'],
-                self.ROVER_DIMS[-1] // 4,
-            )
+    def draw_dummy_points(self, depth, isDraw):
+        points = []
+        for col in range(0, depth.shape[1], 10):
+            nonZeroVals = [
+                (val, i)
+                for i, val in enumerate(depth[self.VALID_DRANGE[0]:self.VALID_DRANGE[1], col])
+                if val > 0
+            ]
+            if len(nonZeroVals):
+                Z, row = min(nonZeroVals, key=lambda i: i[0])
+                X, Y, Z = point2Dto3D((col, row), Z, self.k, self.depthFactor)
+                if Z > 0:
+                    points.append([X, Y, Z, 1])
+
+        points = np.array(points).T
+        tPoints = self.P @ points
+        # tPoints = np.dot(points, self.MAP_SCALE)
+        tPoints[1, :] = tPoints[2, :]
+        tPoints[2, :] = 0
+        tPoints = tPoints[0:3].T
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(tPoints)
+
+        self.o3vis.add_geometry(pcd)
+        self.o3vis.update_geometry(pcd)
+        self.o3vis.poll_events()
+        self.o3vis.update_renderer()
 
     def calc_map_points(self, depth, angle, OFFSETS, scale):
         X_OFFSET, Y_OFFSET = OFFSETS
