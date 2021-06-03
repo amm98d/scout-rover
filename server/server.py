@@ -4,27 +4,26 @@ from time import sleep
 import os
 from platform import platform
 import urllib.request
-# import fpstimer
 import select
 import sys
-# import tty
-# import termios
 import numpy as np
 import cv2
 import io
 import zlib
 import msvcrt
 import threading
+import select
 
 # internal modules
 import sys
 sys.path.append("../common/")
 sys.path.append("./slam/")
 from NetworkHandler import *
-from SLAM import *
+from SlamHandler import *
 
-# global variables
+# global initializations
 SERVER_ENV = 'Windows'
+np.random.seed(1)
 
 class Server:
     """
@@ -49,12 +48,55 @@ class Server:
             self.server_socket.listen(1)
             self.connection, self.client_address = self.server_socket.accept()
             self.measurementsQueue = []
-            # self.slamAlgorithm = SLAM()
-            self.mainMenu()
+            self.slamHandler = SlamHandler()
+            self.measurementsHandlerThread = threading.Thread(target=self._startMeasuring)
+            self.slamHandlerThread = threading.Thread(target=self.slamHandler.slamHome())
+            self.measurementsHandlerThread.daemon = True
+            self.slamHandlerThread.daemon = True
+            self._mainMenu()
         finally:
-            self.cleanUp()
+            self._cleanUp()
 
-    # for non-blocking user controlled movement of rover
+    def _clearScreen(self):
+        """
+            Clears the console. Intelligently recongizes host os between Windows and Linux.
+        """
+        if platform() == "Windows-10-10.0.19041-SP0":
+            os.system("cls")
+        else:
+            os.system('clear')
+
+    def _cleanUp(self):
+        """
+            Closes Connections.
+        """
+        try:
+            if self.connection is not None:
+                self.connection.close()
+            if self.server_socket is not None:
+                self.server_socket.close()
+        except Exception as e:
+            print(e)
+
+    def _mainMenu(self):
+        while (True):
+            self._clearScreen()
+            print("=========================================")
+            print("                Main Menu                ")
+            print("=========================================")
+            print("1. Initiate Exploration.")
+            print("0. Exit.")
+            print("-----------------------------------------")
+            choice = input("Your Choice: ")
+            if (choice=="1"):
+                self._initiateExploration()
+            elif (choice=="0"):
+                self._clearScreen()
+                print()
+                print("Scout-Rover signing off.")
+                print()
+                return
+
     def _check_interrupts(self):
         """Non-Blocking Console Input for three different Server Environments:
             - 'LocalTemp': Blocking Input for development purposes
@@ -96,22 +138,21 @@ class Server:
                 return False
         return True
 
-    def _uncompress_nparr(self, bytestring):
-        return np.load(io.BytesIO(zlib.decompress(bytestring)))
-
-    def _takeMeasurements(self):
+    def _oneMeasurement(self):
+        def _uncompress_nparr(bytestring):
+            return np.load(io.BytesIO(zlib.decompress(bytestring)))
         rgb_byte_array = urllib.request.urlopen('http://192.168.100.113:5000/rgb').read()
         depth_byte_array = urllib.request.urlopen('http://192.168.100.113:5000/depth').read()
-        rgb = self._uncompress_nparr(rgb_byte_array)
-        depth = self._uncompress_nparr(depth_byte_array)
+        rgb = _uncompress_nparr(rgb_byte_array)
+        depth = _uncompress_nparr(depth_byte_array)
         return (rgb,depth)
 
     def _startMeasuring(self):
         while(True):
             if (len(self.measurementsQueue)<100):
-                frame_A = self._takeMeasurements()
+                frame_A = self._oneMeasurement()
                 self.measurementsQueue.append(frame_A)
-                frame_B = self._takeMeasurements()
+                frame_B = self._oneMeasurement()
                 self.measurementsQueue.append(frame_B)
 
     def _getFrame(self):
@@ -119,7 +160,7 @@ class Server:
             return self.measurementsQueue[0]
         return self.measurementsQueue.pop(0)
 
-    def initiateExploration(self):
+    def _initiateExploration(self):
         self._clearScreen()
         print("===================================================================")
         print("                         Exploration Mode                          ")
@@ -130,103 +171,26 @@ class Server:
         print(" ==> Press Esc Key to exit.")
         print("-------------------------------------------------------------------")
 
-        if SERVER_ENV=='Linux':
-            old_settings = termios.tcgetattr(sys.stdin)
         try:
-            if SERVER_ENV=='Linux':
-                tty.setcbreak(sys.stdin.fileno())
-
-            # Take Initialize Measurements
-            # frame_A = self._takeMeasurements()
-            # frame_B = self._takeMeasurements()
-            # images = [frame_A, frame_B]
-
-            self.measurementsHandlerThread = threading.Thread(target=self._startMeasuring)
-            self.measurementsHandlerThread.daemon = True
             self.measurementsHandlerThread.start()
 
-            # wait until first two images are loaded atleast
+            # buffering measurements queue
             while (len(self.measurementsQueue)<2):
                 pass
 
-            print("IMAGES BUFFERED. STARTING!")
+            self.slamHandlerThread.start()
 
-            # timer = fpstimer.FPSTimer(60)
             while(True):
                 frame = self._getFrame()
-                print(type(frame[0]))
-                print(len(frame[0]))
                 cv2.imshow('rgb', frame[0])
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
-                # gray = cv2.cvtColor(frame[0], cv2.COLOR_BGR2GRAY)
-                # cv2.imshow('frame', gray)
 
                 # checking for user interrupts
-                if SERVER_ENV=='Linux':
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
                 if self._check_interrupts() == False:
                     break
-
-                ## SLAMMING
-                # self.slamAlgorithm.process(images)
-
-                # Update Measurements
-                # frame_A = np.copy(frame_B)
-                # frame_B = self._takeMeasurements()
-                # images = [frame_A, frame_B]
-
-                # FPS Settings
-                # timer.sleep()
-
-            # self.messagesListenerThread.join()
-
         finally:
-            pass
             cv2.destroyAllWindows()
-            if SERVER_ENV=='Linux':
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-
-    def _clearScreen(self):
-        """
-            Clears the console. Intelligently recongizes host os between Windows and Linux.
-        """
-        if platform() == "Windows-10-10.0.19041-SP0":
-            os.system("cls")
-        else:
-            os.system('clear')
-
-    def mainMenu(self):
-        while (True):
-            self._clearScreen()
-            print("=========================================")
-            print("                Main Menu                ")
-            print("=========================================")
-            print("1. Initiate Exploration.")
-            print("0. Exit.")
-            print("-----------------------------------------")
-            choice = input("Your Choice: ")
-            if (choice=="1"):
-                self.initiateExploration()
-            elif (choice=="0"):
-                self._clearScreen()
-                print()
-                print("Scout-Rover signing off.")
-                print()
-                return
-
-    def cleanUp(self):
-        """
-            Closes Connections.
-        """
-        try:
-            if self.connection is not None:
-                self.connection.close()
-            if self.server_socket is not None:
-                self.server_socket.close()
-        except Exception as e:
-            print(e)
 
 server = Server()
 server.start()
