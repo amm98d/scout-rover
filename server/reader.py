@@ -30,8 +30,8 @@ while(True):
     # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('rgb',rgb)
     cv2.imshow('depth',depth)
-    cv2.imwrite(f'saves/rgb/rgb{count}.png',rgb)
-    cv2.imwrite(f'saves/depth/depth{count}.png',depth)
+    # cv2.imwrite(f'saves/rgb/rgb{count}.png',rgb)
+    # cv2.imwrite(f'saves/depth/depth{count}.png',depth)
     count+=1
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

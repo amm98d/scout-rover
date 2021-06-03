@@ -13,6 +13,19 @@ def compress_nparr(nparr):
 
 app = Flask(__name__)
 
+@app.route('/kinect_feed')
+def kinect_feed():
+    print("RECEIVED")
+    (depth,_), (rgb,_) = get_depth(), get_video()
+    print(depth.flatten().shape)
+    print(rgb.flatten().shape)
+    stacked_arr = np.hstack((depth.flatten(),rgb.flatten()))
+    print(stacked_arr.shape)
+    bytes = compress_nparr(stacked_arr)[0]
+    response = make_response(bytes)
+    response.headers.set('Content-Type', 'application/octet-stream')
+    return response
+
 @app.route('/rgb')
 def rgb():
     print("RGB RECEIVED")

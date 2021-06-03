@@ -14,6 +14,7 @@ import cv2
 import io
 import zlib
 import msvcrt
+import threading
 
 # internal modules
 import sys
@@ -47,6 +48,7 @@ class Server:
             self.server_socket.bind(('',port))
             self.server_socket.listen(1)
             self.connection, self.client_address = self.server_socket.accept()
+            self.measurementsQueue = []
             # self.slamAlgorithm = SLAM()
             self.mainMenu()
         finally:
@@ -94,10 +96,28 @@ class Server:
                 return False
         return True
 
+    def _uncompress_nparr(self, bytestring):
+        return np.load(io.BytesIO(zlib.decompress(bytestring)))
+
     def _takeMeasurements(self):
-        byte_array = urllib.request.urlopen('http://192.168.100.113:5000/video_feed').read()
-        frame = np.load(io.BytesIO(zlib.decompress(byte_array))) # decompressing
-        return frame
+        rgb_byte_array = urllib.request.urlopen('http://192.168.100.113:5000/rgb').read()
+        depth_byte_array = urllib.request.urlopen('http://192.168.100.113:5000/depth').read()
+        rgb = self._uncompress_nparr(rgb_byte_array)
+        depth = self._uncompress_nparr(depth_byte_array)
+        return (rgb,depth)
+
+    def _startMeasuring(self):
+        while(True):
+            if (len(self.measurementsQueue)<100):
+                frame_A = self._takeMeasurements()
+                self.measurementsQueue.append(frame_A)
+                frame_B = self._takeMeasurements()
+                self.measurementsQueue.append(frame_B)
+
+    def _getFrame(self):
+        if len(self.measurementsQueue) == 1:
+            return self.measurementsQueue[0]
+        return self.measurementsQueue.pop(0)
 
     def initiateExploration(self):
         self._clearScreen()
@@ -121,11 +141,26 @@ class Server:
             # frame_B = self._takeMeasurements()
             # images = [frame_A, frame_B]
 
+            self.measurementsHandlerThread = threading.Thread(target=self._startMeasuring)
+            self.measurementsHandlerThread.daemon = True
+            self.measurementsHandlerThread.start()
+
+            # wait until first two images are loaded atleast
+            while (len(self.measurementsQueue)<2):
+                pass
+
+            print("IMAGES BUFFERED. STARTING!")
+
             # timer = fpstimer.FPSTimer(60)
             while(True):
-                # frame = self._takeMeasurements()
-                # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                # cv2.imshow('frame',gray)
+                frame = self._getFrame()
+                print(type(frame[0]))
+                print(len(frame[0]))
+                cv2.imshow('rgb', frame[0])
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                # gray = cv2.cvtColor(frame[0], cv2.COLOR_BGR2GRAY)
+                # cv2.imshow('frame', gray)
 
                 # checking for user interrupts
                 if SERVER_ENV=='Linux':
@@ -145,9 +180,11 @@ class Server:
                 # FPS Settings
                 # timer.sleep()
 
+            # self.messagesListenerThread.join()
+
         finally:
             pass
-            # cv.destroyAllWindows()
+            cv2.destroyAllWindows()
             if SERVER_ENV=='Linux':
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 

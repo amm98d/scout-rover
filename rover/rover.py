@@ -12,7 +12,6 @@ import subprocess
 # internal modules
 import sys
 sys.path.append("../common/")
-# sys.path.append("/etc/scout/scout-rover/common/")
 from NetworkHandler import *
 
 class Rover:
@@ -49,8 +48,11 @@ class Rover:
             if message:
                 print(message)
                 self.bluetooth_port.write(message)
-            else:
-                return
+            #if message:
+                #print(message)
+                #self.bluetooth_port.write(message)
+            #else:
+                #return
 
     def cleanUp(self):
         """
