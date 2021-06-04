@@ -48,9 +48,9 @@ class Server:
             self.server_socket.listen(1)
             self.connection, self.client_address = self.server_socket.accept()
             self.measurementsQueue = []
-            self.slamHandler = SlamHandler()
+            self.slamHandler = SlamHandler(self._getFrame)
             self.measurementsHandlerThread = threading.Thread(target=self._startMeasuring)
-            self.slamHandlerThread = threading.Thread(target=self.slamHandler.slamHome())
+            self.slamHandlerThread = threading.Thread(target=self.slamHandler.slamHome)
             self.measurementsHandlerThread.daemon = True
             self.slamHandlerThread.daemon = True
             self._mainMenu()
@@ -175,7 +175,7 @@ class Server:
             self.measurementsHandlerThread.start()
 
             # buffering measurements queue
-            while (len(self.measurementsQueue)<2):
+            while (len(self.measurementsQueue)<10):
                 pass
 
             self.slamHandlerThread.start()

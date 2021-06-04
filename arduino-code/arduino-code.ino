@@ -33,8 +33,8 @@ void setup(){
 void loop(){
 
   // Speed Control
-  analogWrite(enA, 60);
-  analogWrite(enB, 60); 
+  analogWrite(enA, 70);
+  analogWrite(enB, 70); 
 
   // Check for bluetooth input from raspberry pi
   if(Serial.available()){
@@ -47,31 +47,51 @@ void loop(){
   }
 
   if (blueToothVal=='w'){
-    forward();
-    delay(50);
-    brakes();
+    for (int i = 0; i < 2; i++) {
+      forward();
+      delay(50);
+      brakes();
+    }
     blueToothVal = '-';
   }
   
   else if (blueToothVal=='a'){
-    left();
-    delay(100);
-    brakes();
+    // increase speed for turning
+    analogWrite(enA, 85);
+    analogWrite(enB, 85); 
+    for (int i = 0; i < 2; i++) {
+      left();
+      delay(50);
+      brakes();
+    }
     blueToothVal = '-';
+    // put speed back to normal
+    analogWrite(enA, 70);
+    analogWrite(enB, 70); 
   }
 
   else if (blueToothVal=='s'){
-    reverse();
-    delay(100);
-    brakes();
+    for (int i = 0; i < 2; i++) {
+      reverse();
+      delay(50);
+      brakes();
+    }
     blueToothVal = '-';
   }
   
   else if (blueToothVal=='d'){
-    right();
-    delay(100);
-    brakes();
+    // increase speed for turning
+    analogWrite(enA, 85);
+    analogWrite(enB, 85); 
+    for (int i = 0; i < 2; i++) {
+      right();
+      delay(50);
+      brakes();
+    }
     blueToothVal = '-';
+    // put speed back to normal
+    analogWrite(enA, 70);
+    analogWrite(enB, 70); 
   }
   
 }

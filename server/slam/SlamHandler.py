@@ -11,7 +11,8 @@ np.random.seed(1)
 
 class SlamHandler:
 
-    def __init__(self):
+    def __init__(self, getFrameFunc):
+        self._getFrame = getFrameFunc
         self.DATASET = 0
         self.NUM_FRAMES = -1
 
@@ -58,72 +59,78 @@ class SlamHandler:
             },
         }
 
-    def _createFrameGenerator(self):
-        directory = self.metadata[self.DATASET]['directory']
-        hasDepth = self.metadata[self.DATASET]['directory']
-        needsAssociation = self.metadata[self.DATASET]['associate']
+    # def _createFrameGenerator(self):
+    #     directory = self.metadata[self.DATASET]['directory']
+    #     hasDepth = self.metadata[self.DATASET]['directory']
+    #     needsAssociation = self.metadata[self.DATASET]['associate']
 
-        rgbDir = os.path.join(directory, 'rgb')
-        depthDir = os.path.join(directory, 'depth')
+    #     rgbDir = os.path.join(directory, 'rgb')
+    #     depthDir = os.path.join(directory, 'depth')
 
-        if needsAssociation:
-            associationFile = os.path.join(directory, 'associated.txt')
-            with open(associationFile, 'r') as inFile:
-                fileData = inFile.readlines()
-            for line in fileData:
-                line = line.split()
-                rgb = line[1].split('/')[-1]
-                depth = line[3].split('/')[-1]
-                rgbFile = os.path.join(rgbDir, rgb)
-                depthFile = os.path.join(depthDir, depth)
-                img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
-                depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
-                yield img, depth
-        else:
-            rgbFileNames = [os.path.join(rgbDir, fileName)
-                            for fileName in os.listdir(rgbDir)]
-            depthFileNames = [None for _ in range(len(rgbFileNames))]
-            if hasDepth:
-                depthFileNames = [
-                    os.path.join(depthDir, fileName) for fileName in os.listdir(depthDir)
-                ]
+    #     if needsAssociation:
+    #         associationFile = os.path.join(directory, 'associated.txt')
+    #         with open(associationFile, 'r') as inFile:
+    #             fileData = inFile.readlines()
+    #         for line in fileData:
+    #             line = line.split()
+    #             rgb = line[1].split('/')[-1]
+    #             depth = line[3].split('/')[-1]
+    #             rgbFile = os.path.join(rgbDir, rgb)
+    #             depthFile = os.path.join(depthDir, depth)
+    #             img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
+    #             depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
+    #             yield img, depth
+    #     else:
+    #         rgbFileNames = [os.path.join(rgbDir, fileName)
+    #                         for fileName in os.listdir(rgbDir)]
+    #         depthFileNames = [None for _ in range(len(rgbFileNames))]
+    #         if hasDepth:
+    #             depthFileNames = [
+    #                 os.path.join(depthDir, fileName) for fileName in os.listdir(depthDir)
+    #             ]
 
-            for rgbFile, depthFile in zip(rgbFileNames, depthFileNames):
-                img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
-                if hasDepth:
-                    depth = np.loadtxt(depthFile, delimiter=",",
-                                    dtype=np.float64) * 1000.0
-                    # depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
-                    yield img, depth
-                else:
-                    yield img, -1
+    #         for rgbFile, depthFile in zip(rgbFileNames, depthFileNames):
+    #             img = cv.imread(rgbFile, cv.IMREAD_UNCHANGED)
+    #             if hasDepth:
+    #                 depth = np.loadtxt(depthFile, delimiter=",",
+    #                                 dtype=np.float64) * 1000.0
+    #                 # depth = cv.imread(depthFile, cv.IMREAD_UNCHANGED)
+    #                 yield img, depth
+    #             else:
+    #                 yield img, -1
 
-    def _saveMap(self):
-        filePath = os.path.join(os.environ["USERPROFILE"], "Desktop", "Map.png")
-        print()
-        print(f'Saving Map at {filePath}')
-        if cv.imwrite(filePath, self.slamAlgorithm.getMap()):
-            print(f'Map saved')
-        else:
-            print('Map could not be saved')
+    # def _saveMap(self):
+    #     filePath = os.path.join(os.environ["USERPROFILE"], "Desktop", "Map.png")
+    #     print()
+    #     print(f'Saving Map at {filePath}')
+    #     if cv.imwrite(filePath, self.slamAlgorithm.getMap()):
+    #         print(f'Map saved')
+    #     else:
+    #         print('Map could not be saved')
 
-    def _getFrame(self, FRAME_GENERATOR):
-        for i in FRAME_GENERATOR:
-            return i
-        return -1, -1
+    # def _getFrame(self, FRAME_GENERATOR):
+    #     for i in FRAME_GENERATOR:
+    #         return i
+    #     return -1, -1
 
     def slamHome(self):
-        self.FRAME_GENERATOR = self._createFrameGenerator()
+        # self.FRAME_GENERATOR = self._createFrameGenerator()
 
         # GLOBAL VARIABLES
         # poseFig, poseAxis = plt.subplots()
-        depthFactor = self.metadata[self.DATASET]['depth_factor']
-        camera_matrix = self.metadata[self.DATASET]['camera_matrix']
-        dist_coff = self.metadata[self.DATASET]['dist_coff']
+
+        # depthFactor = self.metadata[self.DATASET]['depth_factor']
+        # camera_matrix = self.metadata[self.DATASET]['camera_matrix']
+        # dist_coff = self.metadata[self.DATASET]['dist_coff']
+        depthFactor = 1
+        camera_matrix = [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]]
+        dist_coff = None
         self.slamAlgorithm = SLAM(depthFactor, camera_matrix, dist_coff)
 
-        frameA, depthA = self._getFrame(self.FRAME_GENERATOR)
-        frameB, depthB = self._getFrame(self.FRAME_GENERATOR)
+        # frameA, depthA = self._getFrame(self.FRAME_GENERATOR)
+        # frameB, depthB = self._getFrame(self.FRAME_GENERATOR)
+        frameA, depthA = self._getFrame()
+        frameB, depthB = self._getFrame()
         images = [frameA, frameB]
         depths = [depthA, depthB]
 
@@ -138,7 +145,7 @@ class SlamHandler:
             # Update Measurements
             frameA = np.copy(frameB)
             depthA = np.copy(depthB)
-            frameB, depthB = self._getFrame(self.FRAME_GENERATOR)
+            frameB, depthB = self._getFrame()
             if np.isscalar(frameB) or i > 500:
                 break
             images = [frameA, frameB]
