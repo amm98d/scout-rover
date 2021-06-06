@@ -1,6 +1,7 @@
 # external modules
 import socket
 from time import sleep
+# import time
 import os
 from platform import platform
 import urllib.request
@@ -132,6 +133,9 @@ class Server:
                 print("left")
             elif ord(k) == 32:
                 NetworkHandler().send(b' ',self.connection)
+                # frame = self._oneMeasurement()[0]
+                # fileName = "./saves/calibration/" + str(time.time()) + ".png"
+                # cv2.imwrite(fileName, frame)
                 print('brakes')
             elif ord(k) == 27:
                 print("Esc")
@@ -150,10 +154,8 @@ class Server:
     def _startMeasuring(self):
         while(True):
             if (len(self.measurementsQueue)<100):
-                frame_A = self._oneMeasurement()
-                self.measurementsQueue.append(frame_A)
-                frame_B = self._oneMeasurement()
-                self.measurementsQueue.append(frame_B)
+                frame = self._oneMeasurement()
+                self.measurementsQueue.append(frame)
 
     def _getFrame(self):
         if len(self.measurementsQueue) == 1:
@@ -175,14 +177,18 @@ class Server:
             self.measurementsHandlerThread.start()
 
             # buffering measurements queue
-            while (len(self.measurementsQueue)<10):
+            while (len(self.measurementsQueue)<2):
                 pass
 
             self.slamHandlerThread.start()
 
             while(True):
-                frame = self._getFrame()
-                cv2.imshow('rgb', frame[0])
+                frame = self.measurementsQueue[-1]
+                # cv2.imshow('rgb', frame[0])
+                print("==================================================")
+                print(np.amin(frame[1]))
+                print(np.amax(frame[1]))
+                print("==================================================")
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 

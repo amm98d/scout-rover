@@ -122,9 +122,10 @@ class SlamHandler:
         # depthFactor = self.metadata[self.DATASET]['depth_factor']
         # camera_matrix = self.metadata[self.DATASET]['camera_matrix']
         # dist_coff = self.metadata[self.DATASET]['dist_coff']
-        depthFactor = 1
-        camera_matrix = [[525.0, 0, 319.5], [0, 525.0, 239.5], [0, 0, 1.0]]
-        dist_coff = None
+        depthFactor = 1000
+        camera_matrix = [[561.93206787, 0, 323.96944442], [ 0, 537.88018799, 249.35236366], [0, 0, 1]]
+        dist_coff = [ 3.64965254e-01 , -2.02943943e+00 , -1.46113154e-03 , 9.97005541e-03 , 5.04006892e+00]
+        frameA, depthA = self._getFrame()
         self.slamAlgorithm = SLAM(depthFactor, camera_matrix, dist_coff)
 
         # frameA, depthA = self._getFrame(self.FRAME_GENERATOR)
@@ -133,6 +134,10 @@ class SlamHandler:
         frameB, depthB = self._getFrame()
         images = [frameA, frameB]
         depths = [depthA, depthB]
+
+        # print("=====================================================================")
+        # print(len(frameA))
+        # print("=====================================================================")
 
         i = 2
         while True:
@@ -146,8 +151,8 @@ class SlamHandler:
             frameA = np.copy(frameB)
             depthA = np.copy(depthB)
             frameB, depthB = self._getFrame()
-            if np.isscalar(frameB) or i > 500:
-                break
+            # if np.isscalar(frameB) or i > 500:
+            #     break
             images = [frameA, frameB]
             depths = [depthA, depthB]
 

@@ -25,7 +25,7 @@ class SLAM:
             dist_coff, dtype=np.float32,
         ) if dist_coff else dist_coff
         self.depthFactor = depthFactor
-        self.VALID_DRANGE = [0, 500]
+        self.VALID_DRANGE = [0, 240]
         self.MIN_INLIERS = 5
         self.MAP_SIZE = 1000
         self.CELL_SIZE = 1
@@ -72,6 +72,8 @@ class SLAM:
 
     def process(self, images, depths, iterator):
         print(f"Processsing frame {iterator}")
+        cv.imshow("rgb",images[1])
+        cv.imshow("depth",depths[1][0:240])
         imgs_grey = [
             cv.cvtColor(images[0], cv.COLOR_BGR2GRAY),
             cv.cvtColor(images[1], cv.COLOR_BGR2GRAY),
@@ -112,9 +114,9 @@ class SLAM:
             return
 
         # Not enough inliers
-        # if inliersCount < self.MIN_INLIERS:
-        #     print(f"\t->->Frame Filtered because low inliers: {inliersCount}")
-        #     return
+        if inliersCount < self.MIN_INLIERS:
+            print(f"\t->->Frame Filtered because low inliers: {inliersCount}")
+            return
         #     # To Do: ICP transformation estimation
         # else:
         #     # Do ICP pose refinement of 3D point clouds

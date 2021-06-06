@@ -137,7 +137,7 @@ def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
         p2_z = depth_map[int(p2_y), int(p2_x)]
         w1_x, w1_y, w1_z = point2Dto3D((p1_x, p1_y), p1_z, k, depth_factor)
         w2_x, w2_y, w2_z = point2Dto3D((p2_x, p2_y), p2_z, k, depth_factor)
-        if w1_z > 0 and w1_z < 1000:
+        if w1_z > 0 and w1_z < 20:
             used_matches.append(m)
             image1_points.append([p1_x, p1_y])
             image2_points.append([p2_x, p2_y])
@@ -149,6 +149,8 @@ def pnp_estimation(match, kp1, kp2, k, dist_coff, depth_map, depth_factor):
     image1_points = np.array(image1_points).astype('double')
     image2_points = np.array(image2_points).astype('double')
 
+    print(cloud1_points.shape)
+    print(image2_points.shape)
     _, rvec, tvec, inliers = cv.solvePnPRansac(
         cloud1_points, image2_points, k, dist_coff, flags=cv.SOLVEPNP_EPNP)
 
