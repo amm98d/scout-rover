@@ -99,9 +99,9 @@ class SLAM:
         self.trajectory.append(new_trajectory)
 
         curr_pose = calc_robot_pose(self.P[:3, :3], self.P[:, 3])
+        self.poses.append(curr_pose)
         curr_pose[0] += 200
         curr_pose[1] += 200
-        self.poses.append(curr_pose)
 
         # Visualize traj
         map_points = self.calc_map_points(
@@ -217,3 +217,46 @@ class SLAM:
                 color,
                 -1,
             )
+
+    def makeLogProbs(self, xLims, yLims):
+        # print(xLims, yLims)
+        xLims = (math.floor(xLims[0]), math.ceil(xLims[1]))
+        yLims = (math.floor(yLims[0]), math.ceil(yLims[1]))
+        # print(xLims, yLims)
+        xSize = xLims[1] - xLims[0]
+        ySize = yLims[1] - yLims[0]
+        # print(xSize, ySize)
+
+        self.log_prob_map = np.zeros(
+            (ySize, xSize))
+        # print(self.log_prob_map.shape)
+
+        for i, op in enumerate(self.open_points):
+            top = [int(op[0]-xLims[0]), int(op[1]-yLims[0])]
+            px, py = top
+            py = ySize - py
+            self.log_prob_map[py, px] += self.l_free
+
+        for i, mp in enumerate(self.map_points):
+            tmp = [int(mp[0]-xLims[0]), int(mp[1]-yLims[0])]
+            px, py = tmp
+            py = ySize - py
+            self.log_prob_map[py, px] += self.l_occ
+
+        # for i, mp in enumerate(self.map_points):
+        #     tmp = [int(mp[0]-xLims[0]), int(mp[1]-yLims[0])]
+        #     px, py = tmp
+        #     py = ySize - py
+        #     cell_val = self.log_prob_map[py, px]
+        #     px -= px % self.CELL_SIZE
+        #     py -= py % self.CELL_SIZE
+        #     self.log_prob_map[py:py+self.CELL_SIZE,
+        #                       px:px+self.CELL_SIZE] = cell_val
+
+        plt.clf()
+        plt.imshow(1.0 - 1./(1.+np.exp(self.log_prob_map)),
+                   'Greys')  # This is probability
+        plt.show()
+        # log probabilities (looks really cool)
+        # plt.imshow(self.log_prob_map, 'Greys')
+        # plt.show()
