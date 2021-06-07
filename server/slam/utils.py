@@ -34,7 +34,7 @@ def calc_robot_pose(rmat, tvec, showAllDOF=False):
     #     print(f"RMat:\n\t{rmat}")
     #     print(f"Coordinates:\n\t{[round(x, 5), round(y, 5), round(z, 5)]}")
     #     print(f"Angles:\n\t{[round(thetaX, 5), round(thetaY, 5), round(thetaZ, 5)]}")
-    return [round(x, 5), round(z, 5), round(thetaY, 5)]
+    return [int(x), int(z), round(thetaY, 5)]
 
 
 # def extract_poses(particles):
