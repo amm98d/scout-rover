@@ -9,8 +9,7 @@ class Frame:
         self.frame_nbr = frame_nbr
 
         # Extract features
-        img_grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        self.kp, self.des = orb_extractor(img_grey)
+        self.kp, self.des = orb_extractor(img)
 
     def nbr_features(self):
         return len(self.kp)
