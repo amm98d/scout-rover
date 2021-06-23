@@ -3,16 +3,19 @@ import socket
 from time import sleep
 import os
 from platform import platform
-import urllib.request
 import select
-import sys
 import numpy as np
-import cv2
-import io
 import zlib
 import msvcrt
 import threading
 import select
+import cv2
+import zlib
+import requests
+import sys
+sys.path.append("../common/")
+sys.path.append("./slam/")
+from SLAM import *
 
 # internal modules
 import sys
@@ -139,12 +142,12 @@ class Server:
         return True
 
     def _oneMeasurement(self):
-        def _uncompress_nparr(bytestring):
-            return np.load(io.BytesIO(zlib.decompress(bytestring)))
-        rgb_byte_array = urllib.request.urlopen('http://192.168.100.113:5000/rgb').read()
-        depth_byte_array = urllib.request.urlopen('http://192.168.100.113:5000/depth').read()
-        rgb = _uncompress_nparr(rgb_byte_array)
-        depth = _uncompress_nparr(depth_byte_array)
+        rgb_byte_array = requests.get('http://192.168.100.113:5000/color').content
+        depth_byte_array = requests.get('http://192.168.100.113:5000/rgb').content
+        rgb = zlib.decompress(rgb_byte_array)
+        depth = zlib.decompress(depth_byte_array)
+        rgb = np.reshape(np.frombuffer(rgb, dtype=np.uint8), (480, 640))
+        depth = np.reshape(np.frombuffer(depth, dtype=np.uint16), (480, 640))
         return (rgb,depth)
 
     def _startMeasuring(self):
@@ -175,10 +178,10 @@ class Server:
             self.measurementsHandlerThread.start()
 
             # buffering measurements queue
-            while (len(self.measurementsQueue)<10):
+            while (len(self.measurementsQueue)<2):
                 pass
 
-            self.slamHandlerThread.start()
+            # self.slamHandlerThread.start()
 
             while(True):
                 frame = self._getFrame()
