@@ -16,26 +16,18 @@ class SlamHandler:
         camera_matrix = [[561.93206787, 0, 323.96944442], [ 0, 537.88018799, 249.35236366], [0, 0, 1]]
         dist_coff = [3.64965254e-01, -2.02943943e+00, -1.46113154e-03, 9.97005541e-03, 5.04006892e+00]
 
-        frameA, depthA = self._getFrame()
-        frameB, depthB = self._getFrame()
-        images = [frameA, frameB]
-        depths = [depthA, depthB]
-
-        self.slamAlgorithm = SLAM(frameA, depthA, depthFactor, camera_matrix, dist_coff)
-        i = 2
+        img, depth = self._getFrame()
+        self.slamAlgorithm = SLAM(img, depth, depthFactor, camera_matrix, dist_coff)
+        i = 1
         while True:
-            # SLAMMING
-            if i > 1:
-                self.slamAlgorithm.process(images, depths, i)
+            newImg, newDepth = self._getFrame()
+
+            if np.isscalar(newImg):
+                print("BREAKING")
+                break
+
+            self.slamAlgorithm.process([img, newImg], [depth, newDepth], i)
             i += 1
 
-            # Update Measurements
-            frameA = np.copy(frameB)
-            depthA = np.copy(depthB)
-            frameB, depthB = self._getFrame()
-            if np.isscalar(frameB) or i > 500:
-                break
-            images = [frameA, frameB]
-            depths = [depthA, depthB]
-
-        print('Mapping Completed')
+            img = newImg
+            depth = newDepth

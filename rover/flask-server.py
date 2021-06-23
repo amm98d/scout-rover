@@ -1,8 +1,9 @@
 from freenect import sync_get_depth as get_depth, sync_get_video as get_video
-from flask import Flask, render_template, make_response
+from flask import Flask, render_template, make_response, Response
 import io
 import zlib
 import numpy as np
+import cv2 as cv
 
 def compress_nparr(nparr):
     bytestream = io.BytesIO()
@@ -30,19 +31,33 @@ def kinect_feed():
 def rgb():
     print("RGB RECEIVED")
     (rgb,_) = get_video()
-    rgb_bytes = compress_nparr(rgb)[0]
-    response = make_response(rgb_bytes)
-    response.headers.set('Content-Type', 'application/octet-stream')
-    return response
+    print(type(rgb))
+    print(rgb.shape)
+    return None
+    #rgb_bytes = compress_nparr(rgb)[0]
+    #response = make_response(rgb_bytes)
+    #response.headers.set('Content-Type', 'application/octet-stream')
+    #return response
 
 @app.route('/depth')
 def depth():
     print("DEPTH RECEIVED")
     (depth,_) = get_depth()
-    depth_bytes = compress_nparr(depth)[0]
-    response = make_response(depth_bytes)
-    response.headers.set('Content-Type', 'application/octet-stream')
-    return response
+    print(type(depth))
+    print(depth.shape)
+    return None
+    #depth_bytes = compress_nparr(depth)[0]
+    #response = make_response(depth_bytes)
+    #response.headers.set('Content-Type', 'application/octet-stream')
+    #return response
+
+@app.route('/rgbMusa')
+def rgbMusa():
+    (rgb,_) = get_video()
+    ret, buffer = cv.imencode('.jpg', rgb)
+    frame = b'--buffer\r\n' + b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n'
+    return Response(frame, mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port='5000')
+

@@ -51,6 +51,7 @@ class Server:
             self.server_socket.listen(1)
             self.connection, self.client_address = self.server_socket.accept()
             self.measurementsQueue = []
+            self.escaped = False
             self.slamHandler = SlamHandler(self._getFrame)
             self.measurementsHandlerThread = threading.Thread(target=self._startMeasuring)
             self.slamHandlerThread = threading.Thread(target=self.slamHandler.slamHome)
@@ -151,7 +152,7 @@ class Server:
         return (rgb,depth)
 
     def _startMeasuring(self):
-        while(True):
+        while(self.escaped==False):
             if (len(self.measurementsQueue)<100):
                 frame_A = self._oneMeasurement()
                 self.measurementsQueue.append(frame_A)
@@ -181,17 +182,22 @@ class Server:
             while (len(self.measurementsQueue)<2):
                 pass
 
-            # self.slamHandlerThread.start()
+            self.slamHandlerThread.start()
 
             while(True):
-                frame = self._getFrame()
-                cv2.imshow('rgb', frame[0])
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                # frame = self._getFrame()
+                # cv2.imshow('rgb', frame[0])
+                # if cv2.waitKey(1) & 0xFF == ord('q'):
+                #     break
 
                 # checking for user interrupts
                 if self._check_interrupts() == False:
+                    self.escaped = True
+                    self.measurementsQueue.append((1,1))
                     break
+
+            self.slamHandlerThread.join()
+
         finally:
             cv2.destroyAllWindows()
 

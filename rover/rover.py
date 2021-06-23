@@ -32,7 +32,6 @@ class Rover:
             self.bluetooth_port = serial.Serial('/dev/rfcomm0',9600)
             self.rover_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.rover_socket.connect((ip,port))
-            #self.flask_server = subprocess.Popen(['python3', 'rover/flask-server.py'])
             self.messagesListenerThread = threading.Thread(target=self.handle_incoming_messages)
             self.messagesListenerThread.start()
             self.messagesListenerThread.join()
@@ -48,11 +47,8 @@ class Rover:
             if message:
                 print(message)
                 self.bluetooth_port.write(message)
-            #if message:
-                #print(message)
-                #self.bluetooth_port.write(message)
-            #else:
-                #return
+            else:
+                return
 
     def cleanUp(self):
         """
@@ -68,3 +64,4 @@ class Rover:
 
 rover = Rover()
 rover.start()
+
