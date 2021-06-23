@@ -145,6 +145,8 @@ class Server:
     def _oneMeasurement(self):
         rgb_byte_array = requests.get('http://192.168.100.113:5000/color').content
         depth_byte_array = requests.get('http://192.168.100.113:5000/rgb').content
+        # rgb_byte_array = requests.get('http://192.168.43.193:5000/color').content
+        # depth_byte_array = requests.get('http://192.168.43.193:5000/rgb').content
         rgb = zlib.decompress(rgb_byte_array)
         depth = zlib.decompress(depth_byte_array)
         rgb = np.reshape(np.frombuffer(rgb, dtype=np.uint8), (480, 640))

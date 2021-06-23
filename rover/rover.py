@@ -21,6 +21,7 @@ class Rover:
     """
 
     def start(self, ip='192.168.100.14', port=6909):
+    # def start(self, ip='192.168.43.22', port=6909):
         """
             Kickstarts the rover.
             - Creates socket
@@ -32,6 +33,7 @@ class Rover:
             self.bluetooth_port = serial.Serial('/dev/rfcomm0',9600)
             self.rover_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.rover_socket.connect((ip,port))
+            #self.flask_server = subprocess.Popen(['python3', 'rover/flask-server.py'])
             self.messagesListenerThread = threading.Thread(target=self.handle_incoming_messages)
             self.messagesListenerThread.start()
             self.messagesListenerThread.join()
