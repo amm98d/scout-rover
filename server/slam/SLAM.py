@@ -120,7 +120,7 @@ class SLAM:
 
         cv.imshow('depth', depths[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :].astype(np.uint8))
         cv.imshow('img', imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :])
-        cv.waitKey(20)
+        cv.waitKey(1)
 
         self.last_frame = curr_frame
 
