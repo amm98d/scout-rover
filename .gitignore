@@ -343,4 +343,5 @@ Thumbs.db
 
 server/saves/*
 server/saves.zip
+*.mp4
 # End of https://www.toptal.com/developers/gitignore/api/flask
