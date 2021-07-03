@@ -117,9 +117,12 @@ class SLAM:
         # self.draw_dummy_points(depths[1], 1)
         self.draw_map_points(map_points[1])
         cv.imshow('map', self.map)
+        cv.imwrite(f"dataviz/map/map-{iterator}.png", self.map)
 
-        cv.imshow('depth', depths[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :].astype(np.uint8))
+        # cv.imshow('depth', depths[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :].astype(np.uint8))
+
         cv.imshow('img', imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :])
+        cv.imwrite(f"dataviz/img/img-{iterator}.png", imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :])
         cv.waitKey(1)
 
         self.last_frame = curr_frame
