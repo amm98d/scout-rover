@@ -115,7 +115,7 @@ class SLAM:
         self.open_points.extend(map_points[2])
 
         # self.draw_dummy_points(depths[1], 1)
-        self.draw_map_points(map_points[1])
+        self.draw_map_points(map_points[1], map_points[2])
         cv.imshow('map', self.map)
         # cv.imwrite(f"dataviz/map/map-{iterator}.png", self.map)
 
@@ -169,6 +169,7 @@ class SLAM:
         X_OFFSET, Y_OFFSET = OFFSETS
 
         points = []
+        borders = []
         for col in range(0, depth.shape[1], 10):
             nonZeroVals = [
                 (val, i)
@@ -180,6 +181,8 @@ class SLAM:
                 X, Y, Z = point2Dto3D((col, row), Z, self.k, self.depthFactor)
                 if Z > 0 and Z <= 2:
                     points.append([X, Y, Z, 1])
+                elif Z > 2:
+                    borders.append([X, Y, 2, 1])
 
         points = np.array(points).T
         # tPoints = self.P @ points
@@ -202,6 +205,27 @@ class SLAM:
                 print('error')
                 print(sp, tp, linePoints)
                 exit()
+
+        if len(borders):
+            borders = np.array(borders).T
+            # tPoints = self.P @ points
+            tBorders = borders
+            tBorders = np.dot(tBorders, scale)
+            tBorders[0, :] += X_OFFSET
+            tBorders[2, :] += Y_OFFSET
+            tBorders = tBorders[0:3:2].T
+            for tb in tBorders:
+                tb = [int(tb[0]), int(tb[1])]
+                sp = [int(X_OFFSET), int(Y_OFFSET)]
+                linePoints = gmu.bresenham(sp, tb)
+                if linePoints[-1][0] == tb[0] and linePoints[-1][1] == tb[1]:
+                    freespaces.extend(linePoints[:-1])
+                elif linePoints[0][0] == tb[0] and linePoints[0][1] == tb[1]:
+                    freespaces.extend(linePoints[1:])
+                else:
+                    print('error')
+                    print(sp, tb, linePoints)
+                    exit()
 
         freespaces = np.array(freespaces)
 
@@ -250,13 +274,21 @@ class SLAM:
         # plt.imshow(self.log_prob_map, 'Greys')
         # plt.show()
 
-    def draw_map_points(self, map_point):
+    def draw_map_points(self, map_points, open_points):
         self.map[:, :, :] = self.MAP_COLOR['unexplored']
-        for mp in map_point:
+        for mp in map_points:
             cv.circle(
                 self.map,
                 (int(mp[0]), int(self.MAP_SIZE - mp[1])),
                 1,
                 self.MAP_COLOR['occupied'],
+                -1
+            )
+        for op in open_points:
+            cv.circle(
+                self.map,
+                (int(op[0]), int(self.MAP_SIZE - op[1])),
+                1,
+                self.MAP_COLOR['open'],
                 -1
             )
