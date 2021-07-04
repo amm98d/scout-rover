@@ -21,10 +21,10 @@ def get_depth():
 def getFrame():
     color_bytes = get_color()
     depth_bytes = get_depth()
-    
+
     color_bytes=zlib.decompress(color_bytes)
     depth_bytes=zlib.decompress(depth_bytes)
-    
+
     color_frame = np.reshape(np.frombuffer(color_bytes, dtype=np.uint8), (480, 640))
     depth_frame = np.reshape(np.frombuffer(depth_bytes, dtype=np.uint16), (480, 640))
 
@@ -57,14 +57,16 @@ i = 1
 while True:
 
     newImg, newDepth = getFrame()
+
     # SLAMMING
-    # cv.imshow('img', newImg)
-    # cv.imshow('depth', newDepth.astype(np.uint8))
-    # print(np.amin(newDepth), np.amax(newDepth))
-    # print(newDepth[240, 320])
-    # cv.waitKey(20)
     slamAlgorithm.process([img, newImg], [depth, newDepth], i)
-    # cv.waitKey(2000)
+    for i in range(slamAlgorithm.map.shape[0]):
+        if (not (np.unique(slamAlgorithm.map[i],axis=0)==[[200,200,200]]).all()):
+            u, indices = np.unique(slamAlgorithm.map[i],axis=0,return_index=True)
+            for valInd in range(len(u)):
+                print(u[valInd],indices[valInd])
+            print("==============================")
+            # print(f"{np.unique(slamAlgorithm.map[i],axis=0)}")
     i += 1
 
     img = newImg
