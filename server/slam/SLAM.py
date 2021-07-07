@@ -14,7 +14,7 @@ import grid_map_utils as gmu
 import open3d as o3d
 # import scipy.io
 # import scipy.stats
-
+import numpy as np
 
 class SLAM:
     def __init__(self, img, depth, depthFactor, camera_matrix, dist_coff):
@@ -66,6 +66,7 @@ class SLAM:
         # self.prev_pc = None
         # self.o3vis = o3d.visualization.Visualizer()
         # self.o3vis.create_window()
+        self.frontier_points = []
 
     def process(self, imgs, depths, iterator):
         print(f"Processsing frame {iterator}")
@@ -116,6 +117,14 @@ class SLAM:
 
         # self.draw_dummy_points(depths[1], 1)
         self.draw_map_points(map_points[1], map_points[2])
+        self.detect_frontiers()
+        for i in self.frontier_points:
+            # print(self.map[])
+            self.map[i[1][0]][i[1][1]] = [255,0,0]
+            # print(self.frontier_points[i])
+        # print(self.frontier_points[:5],end='\n')
+        # input()
+
         cv.imshow('map', self.map)
         # cv.imwrite(f"dataviz/map/map-{iterator}.png", self.map)
 
@@ -126,6 +135,73 @@ class SLAM:
         cv.waitKey(100)
 
         self.last_frame = curr_frame
+
+    def find_adjacents(self, point, tMap):
+        adjacents = []
+        pointCoords = point[1]
+        adjacents.append(tMap[pointCoords[0]][pointCoords[1]-1]) #up
+        adjacents.append(tMap[pointCoords[0]][pointCoords[1]+1]) #down
+        adjacents.append(tMap[pointCoords[0]-1][pointCoords[1]]) #left
+        adjacents.append(tMap[pointCoords[0]+1][pointCoords[1]]) #right
+        return adjacents
+
+    def find_openspace_neighbors(self, point, tMap):
+        return [neighbour for neighbour in self.find_adjacents(point, tMap) if (neighbour[0]==[255,255,255]).all()]
+
+    def is_frontier_point(self, point, tMap):
+        all_neighbours = self.find_adjacents(point, tMap)
+        # criteria for frontier-point: atleast 1 openspace point and atleast 1 unexplored point
+        hasUnexploredNeighbour = False
+        hasOpenspaceNeighbour = False
+        for n in all_neighbours:
+            if (n[0]==[255,255,255]).all():
+                hasOpenspaceNeighbour = True
+            elif (n[0]==[200,200,200]).all():
+                hasUnexploredNeighbour = True
+        return hasUnexploredNeighbour and hasOpenspaceNeighbour
+
+    def detect_frontiers(self):
+        # for i in range(self.map.shape[0]):
+        #     if (not (np.unique(self.map[i],axis=0)==[[200,200,200]]).all()):
+        #         u, indices = np.unique(self.map[i],axis=0,return_index=True)
+        #         for valInd in range(len(u)):
+        #             print(u[valInd],indices[valInd])
+        #         print("==============================")
+        tMap = []
+        for row in range(self.map.shape[0]):
+            tempRow = []
+            for col in range(self.map.shape[1]):
+                tempRow.append([self.map[row][col],(row,col),'-'])
+            tMap.append(tempRow)
+        queueM = []
+        pose = tMap[int(len(tMap[0])/2)][int(len(tMap[1])/2)]
+        pose[2] = 'Map-Open-List'
+        queueM.append(pose)
+        while(len(queueM)>0):
+            p = queueM.pop()
+            if p[2] == 'Map-Close-List':
+                continue
+            if self.is_frontier_point(p, tMap):
+                queueF = []
+                p[2] = 'Frontier-Open-List'
+                queueF.append(p)
+                while (len(queueF)>0):
+                    q = queueF.pop()
+                    if q[2] == 'Map-Close-List' or q[2] == 'Frontier-CloseList':
+                        continue
+                    if self.is_frontier_point(q, tMap):
+                        self.frontier_points.append(q)
+                        for w in self.find_adjacents(q, tMap):
+                            if w[2]!='Frontier-OpenList' and w[2]!='Frontier-Close-List' and w[2]!='Map-Close-List':
+                                w[2] = 'Frontier-OpenList'
+                                queueF.append(w)
+                    q[2] = 'Frontier-Close-List'
+                for each in self.frontier_points:
+                    each[2] = 'Map-Close-List'
+            for v in self.find_adjacents(p, tMap):
+                if v[2]!='Map-Open-List' and v[2]!='Map-Close-List' and len(self.find_openspace_neighbors(v, tMap))>0:
+                    queueM.append(v)
+            p[2] = 'Map-Close-List'
 
     def get_trajectory(self):
         return np.array(self.trajectory).T

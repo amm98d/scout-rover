@@ -60,13 +60,6 @@ while True:
 
     # SLAMMING
     slamAlgorithm.process([img, newImg], [depth, newDepth], i)
-    for i in range(slamAlgorithm.map.shape[0]):
-        if (not (np.unique(slamAlgorithm.map[i],axis=0)==[[200,200,200]]).all()):
-            u, indices = np.unique(slamAlgorithm.map[i],axis=0,return_index=True)
-            for valInd in range(len(u)):
-                print(u[valInd],indices[valInd])
-            print("==============================")
-            # print(f"{np.unique(slamAlgorithm.map[i],axis=0)}")
     i += 1
 
     img = newImg
