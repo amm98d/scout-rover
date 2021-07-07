@@ -119,11 +119,20 @@ class SLAM:
         self.draw_map_points(map_points[1], map_points[2])
         self.detect_frontiers()
         for i in self.frontier_points:
-            # print(self.map[])
             self.map[i[1][0]][i[1][1]] = [255,0,0]
-            # print(self.frontier_points[i])
-        # print(self.frontier_points[:5],end='\n')
-        # input()
+        centroid_x, centroid_y = self.calculate_centroid()
+        print(centroid_x, centroid_y)
+        self.map[centroid_x][centroid_y] = [0,0,255]
+        self.map[centroid_x-1][centroid_y] = [0,0,255]
+        self.map[centroid_x-2][centroid_y] = [0,0,255]
+        self.map[centroid_x-3][centroid_y] = [0,0,255]
+        self.map[centroid_x-4][centroid_y] = [0,0,255]
+        self.map[centroid_x-5][centroid_y] = [0,0,255]
+        self.map[centroid_x+1][centroid_y] = [0,0,255]
+        self.map[centroid_x+2][centroid_y] = [0,0,255]
+        self.map[centroid_x+3][centroid_y] = [0,0,255]
+        self.map[centroid_x+4][centroid_y] = [0,0,255]
+        self.map[centroid_x+5][centroid_y] = [0,0,255]
 
         cv.imshow('map', self.map)
         # cv.imwrite(f"dataviz/map/map-{iterator}.png", self.map)
@@ -132,9 +141,14 @@ class SLAM:
 
         cv.imshow('img', imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :])
         # cv.imwrite(f"dataviz/img/img-{iterator}.png", imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :])
-        cv.waitKey(100)
+        cv.waitKey(10)
 
         self.last_frame = curr_frame
+
+    def calculate_centroid(self):
+        x = int(sum(p[1][0] for p in self.frontier_points)/len(self.frontier_points))
+        y = int(sum(p[1][1] for p in self.frontier_points)/len(self.frontier_points))
+        return (x,y)
 
     def find_adjacents(self, point, tMap):
         adjacents = []
@@ -149,6 +163,8 @@ class SLAM:
         return [neighbour for neighbour in self.find_adjacents(point, tMap) if (neighbour[0]==[255,255,255]).all()]
 
     def is_frontier_point(self, point, tMap):
+        if (point[0]==[0,0,0]).all():
+            return False
         all_neighbours = self.find_adjacents(point, tMap)
         # criteria for frontier-point: atleast 1 openspace point and atleast 1 unexplored point
         hasUnexploredNeighbour = False
