@@ -166,6 +166,12 @@ class Server:
             elif 350 - self.slamAlgorithm.centroid_x < 0:
                 NetworkHandler().send(b'a',self.connection)
 
+    def move(self):
+        print('centroid_y:',self.slamAlgorithm.centroid_y, 'diff:', int(abs(self.slamAlgorithm.centroid_y - 350))*0.1)
+        for i in range(int(abs(self.slamAlgorithm.centroid_y - 350)*0.1)):
+            NetworkHandler().send(b'w',self.connection)
+            sleep(0.1)
+
     def _slamHome(self):
         self._clearScreen()
         print("===================================================================")
@@ -211,6 +217,7 @@ class Server:
             i += 1
 
             self.adjust_heading()
+            self.move()
 
             sleep(1)
 
