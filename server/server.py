@@ -156,7 +156,15 @@ class Server:
                 self.escaped = True
                 self.measurementsQueue.append((1,1))
                 break
-            sleep(0.1)
+            # sleep(0.1)
+
+    def adjust_heading(self):
+        print('centroid_x:',self.slamAlgorithm.centroid_x, 'diff:', abs(self.slamAlgorithm.centroid_x - 350))
+        for i in range(abs(self.slamAlgorithm.centroid_x - 350)):
+            if 350 - self.slamAlgorithm.centroid_x > 0:
+                NetworkHandler().send(b'd',self.connection)
+            elif 350 - self.slamAlgorithm.centroid_x < 0:
+                NetworkHandler().send(b'a',self.connection)
 
     def _slamHome(self):
         self._clearScreen()
@@ -179,10 +187,17 @@ class Server:
         camera_matrix = [[561.93206787, 0, 323.96944442], [ 0, 537.88018799, 249.35236366], [0, 0, 1]]
         dist_coff = [3.64965254e-01, -2.02943943e+00, -1.46113154e-03, 9.97005541e-03, 5.04006892e+00]
 
-        img, depth = self._getFrame()
-        self.slamAlgorithm = SLAM(img, depth, depthFactor, camera_matrix, dist_coff)
+        # for i in range(120):
+        #     NetworkHandler().send(b'a',self.connection)
+        #     print("right")
 
-        self.controlHandlerThread.start()
+        img, depth = self._getFrame()
+        newImg, newDepth = self._getFrame()
+        self.slamAlgorithm = SLAM(img, depth, depthFactor, camera_matrix, dist_coff)
+        # self.slamAlgorithm.process([img, newImg], [depth, newDepth], i)
+
+        # self.controlHandlerThread.start()
+        # self.controlHandlerThread.join()
 
         i = 1
         while True:
@@ -194,6 +209,10 @@ class Server:
 
             self.slamAlgorithm.process([img, newImg], [depth, newDepth], i)
             i += 1
+
+            self.adjust_heading()
+
+            sleep(1)
 
             img = newImg
             depth = newDepth

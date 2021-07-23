@@ -120,19 +120,18 @@ class SLAM:
         self.detect_frontiers()
         for i in self.frontier_points:
             self.map[i[1][0]][i[1][1]] = [255,0,0]
-        centroid_x, centroid_y = self.calculate_centroid()
-        print(centroid_x, centroid_y)
-        self.map[centroid_x][centroid_y] = [0,0,255]
-        self.map[centroid_x-1][centroid_y] = [0,0,255]
-        self.map[centroid_x-2][centroid_y] = [0,0,255]
-        self.map[centroid_x-3][centroid_y] = [0,0,255]
-        self.map[centroid_x-4][centroid_y] = [0,0,255]
-        self.map[centroid_x-5][centroid_y] = [0,0,255]
-        self.map[centroid_x+1][centroid_y] = [0,0,255]
-        self.map[centroid_x+2][centroid_y] = [0,0,255]
-        self.map[centroid_x+3][centroid_y] = [0,0,255]
-        self.map[centroid_x+4][centroid_y] = [0,0,255]
-        self.map[centroid_x+5][centroid_y] = [0,0,255]
+        self.centroid_y, self.centroid_x = self.calculate_centroid()
+        self.map[self.centroid_y][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y-1][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y-2][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y-3][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y-4][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y-5][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y+1][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y+2][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y+3][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y+4][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y+5][self.centroid_x] = [0,0,255]
 
         cv.imshow('map', self.map)
         # cv.imwrite(f"dataviz/map/map-{iterator}.png", self.map)
