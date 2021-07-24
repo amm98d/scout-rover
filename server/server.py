@@ -48,6 +48,7 @@ class Server:
             self.controlHandlerThread = threading.Thread(target=self._initiateExploration)
             self.controlHandlerThread.daemon = True
             self.measurementsHandlerThread.daemon = True
+            self.use_imaging_queue = False
             self._mainMenu()
         finally:
             self._cleanUp()
@@ -145,9 +146,13 @@ class Server:
                 self.measurementsQueue.append(frame_B)
 
     def _getFrame(self):
-        if len(self.measurementsQueue) == 1:
-            return self.measurementsQueue[0]
-        return self.measurementsQueue.pop(0)
+        if self.use_imaging_queue:
+            if len(self.measurementsQueue) == 1:
+                return self.measurementsQueue[0]
+            return self.measurementsQueue.pop(0)
+        else:
+            temp = self._oneMeasurement()
+            return temp
 
     def _initiateExploration(self):
         while(True):
@@ -159,7 +164,7 @@ class Server:
             # sleep(0.1)
 
     def adjust_heading(self):
-        print('centroid_x:',self.slamAlgorithm.centroid_x, 'diff:', abs(self.slamAlgorithm.centroid_x - 350))
+        # print('centroid_x:',self.slamAlgorithm.centroid_x, 'diff:', abs(self.slamAlgorithm.centroid_x - 350))
         for i in range(abs(self.slamAlgorithm.centroid_x - 350)):
             if 350 - self.slamAlgorithm.centroid_x > 0:
                 NetworkHandler().send(b'd',self.connection)
@@ -167,8 +172,10 @@ class Server:
                 NetworkHandler().send(b'a',self.connection)
 
     def move(self):
-        print('centroid_y:',self.slamAlgorithm.centroid_y, 'diff:', int(abs(self.slamAlgorithm.centroid_y - 350))*0.1)
-        for i in range(int(abs(self.slamAlgorithm.centroid_y - 350)*0.1)):
+        # print('centroid_y:',self.slamAlgorithm.centroid_y, 'diff:', int(abs(self.slamAlgorithm.centroid_y - 350))*0.1)
+        # print(int(abs(self.slamAlgorithm.centroid_y - 350)))
+        # print(int(abs(self.slamAlgorithm.centroid_y - 350)*0.1)/3)
+        for i in range(int(abs(self.slamAlgorithm.centroid_y - 350)*0.1)/3):
             NetworkHandler().send(b'w',self.connection)
             sleep(0.1)
 
@@ -183,11 +190,11 @@ class Server:
         print(" ==> Press Esc Key to exit.")
         print("-------------------------------------------------------------------")
 
-        self.measurementsHandlerThread.start()
+        # self.measurementsHandlerThread.start()
 
         # buffering measurements queue
-        while (len(self.measurementsQueue)<2):
-            pass
+        # while (len(self.measurementsQueue)<2):
+        #     pass
 
         depthFactor = 1000
         camera_matrix = [[561.93206787, 0, 323.96944442], [ 0, 537.88018799, 249.35236366], [0, 0, 1]]
