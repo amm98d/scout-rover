@@ -22,7 +22,7 @@ import cv2
 
 app = Flask(__name__)
 roverViewVideo = cv2.VideoCapture("rover-view.mp4")
-humanViewVideo = cv2.VideoCapture("human-view.mp4")
+humanViewVideo = cv2.VideoCapture("http://192.168.100.45:8080/video")
 mapVideo = cv2.VideoCapture("map.mp4")
 
 def genRoverView():
