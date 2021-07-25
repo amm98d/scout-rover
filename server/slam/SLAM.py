@@ -89,7 +89,7 @@ class SLAM:
 
         if len(trajRes) == 0:
             print(f'\t->->Trajectory estimation failed!')
-            return
+            return False
 
         self.P, rmat, tvec, image1_points, image2_points, _, _, used_matches, inliersCount = trajRes
 
@@ -98,7 +98,7 @@ class SLAM:
         move_mean = sum(sorted_matches) / len(sorted_matches)
         if move_mean < 10:
             print(f"\t->->Frame filtered because isSame: {move_mean}")
-            return
+            return False
 
         self.tMats.append((rmat, tvec))
         new_trajectory = self.P[:3, 3]
