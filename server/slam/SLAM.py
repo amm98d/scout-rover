@@ -117,10 +117,14 @@ class SLAM:
 
         # self.draw_dummy_points(depths[1], 1)
         self.draw_map_points(map_points[1], map_points[2])
+
         self.detect_frontiers()
+
         for i in self.frontier_points:
             self.map[i[1][0]][i[1][1]] = [255,0,0]
-        self.centroid_y, self.centroid_x = self.calculate_centroid()
+
+        self.centroid_x, self.centroid_y  = self.calculate_centroid()
+
         self.map[self.centroid_y][self.centroid_x] = [0,0,255]
         self.map[self.centroid_y-1][self.centroid_x] = [0,0,255]
         self.map[self.centroid_y-2][self.centroid_x] = [0,0,255]
@@ -138,18 +142,28 @@ class SLAM:
 
         # cv.imshow('depth', depths[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :].astype(np.uint8))
 
-        cv.imshow('img', imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :])
+        self.video_frame = imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :]
+        cv.imshow('img', self.video_frame)
         # cv.imwrite(f"dataviz/img/img-{iterator}.png", imgs[1][self.VALID_DRANGE[0]:self.VALID_DRANGE[1], :])
         cv.waitKey(10)
 
         self.last_frame = curr_frame
 
     def calculate_centroid(self):
-        x = int(sum(p[1][0] for p in self.frontier_points)/len(self.frontier_points))
-        y = int(sum(p[1][1] for p in self.frontier_points)/len(self.frontier_points))
-        return (x,y)
+        x_sum = 0
+        y_sum = 0
+        count = 0
+        for i in self.frontier_points:
+            if i[1][1] < 400:
+                x_sum += i[1][1]
+                y_sum += i[1][0]
+                count += 1
+        # x = int(sum(p[1][1] for p in self.frontier_points)/len(self.frontier_points))
+        # y = int(sum(p[1][0] for p in self.frontier_points)/len(self.frontier_points))
+        print(int(x_sum/count), int(y_sum/count))
+        return (int(x_sum/count),int(y_sum/count))
 
-    def find_adjacents(self, point, tMap):
+    def _find_adjacents(self, point, tMap):
         adjacents = []
         pointCoords = point[1]
         adjacents.append(tMap[pointCoords[0]][pointCoords[1]-1]) #up
@@ -158,13 +172,13 @@ class SLAM:
         adjacents.append(tMap[pointCoords[0]+1][pointCoords[1]]) #right
         return adjacents
 
-    def find_openspace_neighbors(self, point, tMap):
-        return [neighbour for neighbour in self.find_adjacents(point, tMap) if (neighbour[0]==[255,255,255]).all()]
+    def _find_openspace_neighbors(self, point, tMap):
+        return [neighbour for neighbour in self._find_adjacents(point, tMap) if (neighbour[0]==[255,255,255]).all()]
 
-    def is_frontier_point(self, point, tMap):
+    def _is_frontier_point(self, point, tMap):
         if (point[0]==[0,0,0]).all():
             return False
-        all_neighbours = self.find_adjacents(point, tMap)
+        all_neighbours = self._find_adjacents(point, tMap)
         # criteria for frontier-point: atleast 1 openspace point and atleast 1 unexplored point
         hasUnexploredNeighbour = False
         hasOpenspaceNeighbour = False
@@ -176,12 +190,6 @@ class SLAM:
         return hasUnexploredNeighbour and hasOpenspaceNeighbour
 
     def detect_frontiers(self):
-        # for i in range(self.map.shape[0]):
-        #     if (not (np.unique(self.map[i],axis=0)==[[200,200,200]]).all()):
-        #         u, indices = np.unique(self.map[i],axis=0,return_index=True)
-        #         for valInd in range(len(u)):
-        #             print(u[valInd],indices[valInd])
-        #         print("==============================")
         tMap = []
         for row in range(self.map.shape[0]):
             tempRow = []
@@ -196,7 +204,7 @@ class SLAM:
             p = queueM.pop()
             if p[2] == 'Map-Close-List':
                 continue
-            if self.is_frontier_point(p, tMap):
+            if self._is_frontier_point(p, tMap):
                 queueF = []
                 p[2] = 'Frontier-Open-List'
                 queueF.append(p)
@@ -204,17 +212,17 @@ class SLAM:
                     q = queueF.pop()
                     if q[2] == 'Map-Close-List' or q[2] == 'Frontier-CloseList':
                         continue
-                    if self.is_frontier_point(q, tMap):
+                    if self._is_frontier_point(q, tMap):
                         self.frontier_points.append(q)
-                        for w in self.find_adjacents(q, tMap):
+                        for w in self._find_adjacents(q, tMap):
                             if w[2]!='Frontier-OpenList' and w[2]!='Frontier-Close-List' and w[2]!='Map-Close-List':
                                 w[2] = 'Frontier-OpenList'
                                 queueF.append(w)
                     q[2] = 'Frontier-Close-List'
                 for each in self.frontier_points:
                     each[2] = 'Map-Close-List'
-            for v in self.find_adjacents(p, tMap):
-                if v[2]!='Map-Open-List' and v[2]!='Map-Close-List' and len(self.find_openspace_neighbors(v, tMap))>0:
+            for v in self._find_adjacents(p, tMap):
+                if v[2]!='Map-Open-List' and v[2]!='Map-Close-List' and len(self._find_openspace_neighbors(v, tMap))>0:
                     queueM.append(v)
             p[2] = 'Map-Close-List'
 
@@ -261,7 +269,7 @@ class SLAM:
 
         points = []
         borders = []
-        for col in range(0, depth.shape[1], 10):
+        for col in range(0, depth.shape[1], 1):
             nonZeroVals = [
                 (val, i)
                 for i, val in enumerate(depth[self.VALID_DRANGE[0]:self.VALID_DRANGE[1], col])
@@ -272,8 +280,8 @@ class SLAM:
                 X, Y, Z = point2Dto3D((col, row), Z, self.k, self.depthFactor)
                 if Z > 0 and Z <= 2:
                     points.append([X, Y, Z, 1])
-                elif Z > 2:
-                    borders.append([X, Y, 2, 1])
+                # elif Z > 2:
+                #     borders.append([X, Y, 2, 1])
 
         points = np.array(points).T
         # tPoints = self.P @ points
