@@ -26,7 +26,7 @@ class Server:
         physically mounted on the Rover.
     """
 
-    def start(self, port=6909):
+    def startIt(self, port=6909):
         """
             Kickstarts the whole server.
             - Binds the socket
@@ -127,8 +127,8 @@ class Server:
         return True
 
     def _oneMeasurement(self):
-        rgb_byte_array = requests.get('http://192.168.100.113:5000/color').content
-        depth_byte_array = requests.get('http://192.168.100.113:5000/rgb').content
+        rgb_byte_array = requests.get('http://192.168.43.193:5000/color').content
+        depth_byte_array = requests.get('http://192.168.43.193:5000/rgb').content
         # rgb_byte_array = requests.get('http://192.168.43.193:5000/color').content
         # depth_byte_array = requests.get('http://192.168.43.193:5000/rgb').content
         rgb = zlib.decompress(rgb_byte_array)
@@ -163,23 +163,26 @@ class Server:
                 break
             # sleep(0.1)
 
-    def adjust_heading(self):
-        # print('centroid_x:',self.slamAlgorithm.centroid_x, 'diff:', abs(self.slamAlgorithm.centroid_x - 350))
-        # print(int((abs(self.slamAlgorithm.centroid_x - 350)*0.1)))
-        print(int((abs(self.slamAlgorithm.centroid_x - 350)*0.2)))
-        # for i in range(int((abs(self.slamAlgorithm.centroid_x - 350)*0.2))):
-        #     if 350 - self.slamAlgorithm.centroid_x > 0:
-        #         NetworkHandler().send(b'd',self.connection)
-        #     elif 350 - self.slamAlgorithm.centroid_x < 0:
-        #         NetworkHandler().send(b'a',self.connection)
-        #     sleep(0.1)
+    def _adjust_heading(self):
+        for i in range(int((abs(self.slamAlgorithm.centroid_x - 350)*0.2))):
+            if 350 - self.slamAlgorithm.centroid_x > 0:
+                NetworkHandler().send(b'a',self.connection)
+            elif 350 - self.slamAlgorithm.centroid_x < 0:
+                NetworkHandler().send(b'd',self.connection)
+            sleep(0.1)
 
-    def move(self):
-        # print('centroid_y:',self.slamAlgorithm.centroid_y, 'diff:', int(abs(self.slamAlgorithm.centroid_y - 350))*0.1)
-        print(int((abs(self.slamAlgorithm.centroid_y - 350)*0.1)/2))
-        # for i in range(int((abs(self.slamAlgorithm.centroid_y - 350)*0.1)/2)):
-        #     NetworkHandler().send(b'w',self.connection)
-        #     sleep(0.1)
+    def _u_turn(self):
+        for i in range(80):
+            NetworkHandler().send(b'a',self.connection)
+            sleep(0.1)
+        for i in range(5):
+            NetworkHandler().send(b'w',self.connection)
+            sleep(0.1)
+
+    def _move(self):
+        for i in range(int((abs(self.slamAlgorithm.centroid_y - 350)*0.1)/2)):
+            NetworkHandler().send(b'w',self.connection)
+            sleep(0.1)
 
     def _slamHome(self):
         self._clearScreen()
@@ -217,14 +220,15 @@ class Server:
                 print("BREAKING")
                 break
 
-            if self.slamAlgorithm.process([img, newImg], [depth, newDepth], i) == None:
-                # self.adjust_heading()
-                # self.move()
+            ret = self.slamAlgorithm.process([img, newImg], [depth, newDepth], i)
+            if ret == None:
+                self._adjust_heading()
+                self._move()
                 pass
+            # elif ret == 320:
+            #     self.u_turn()
 
             i += 1
-
-            sleep(1)
 
             img = newImg
             depth = newDepth
@@ -232,4 +236,4 @@ class Server:
         cv2.destroyAllWindows()
 
 server = Server()
-server.start()
+server.startIt()

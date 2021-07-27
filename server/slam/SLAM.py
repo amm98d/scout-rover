@@ -89,7 +89,7 @@ class SLAM:
 
         if len(trajRes) == 0:
             print(f'\t->->Trajectory estimation failed!')
-            return False
+            return 320
 
         self.P, rmat, tvec, image1_points, image2_points, _, _, used_matches, inliersCount = trajRes
 
@@ -123,7 +123,7 @@ class SLAM:
         for i in self.frontier_points:
             self.map[i[1][0]][i[1][1]] = [255,0,0]
 
-        self.centroid_x, self.centroid_y  = self.calculate_centroid()
+        self.centroid_x, self.centroid_y  = self.calculate_centroid(iterator)
 
         self.map[self.centroid_y][self.centroid_x] = [0,0,255]
         self.map[self.centroid_y-1][self.centroid_x] = [0,0,255]
@@ -137,6 +137,18 @@ class SLAM:
         self.map[self.centroid_y+4][self.centroid_x] = [0,0,255]
         self.map[self.centroid_y+5][self.centroid_x] = [0,0,255]
 
+        self.map[self.centroid_y][self.centroid_x] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x-1] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x-2] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x-3] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x-4] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x-5] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x+1] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x+2] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x+3] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x+4] = [0,0,255]
+        self.map[self.centroid_y][self.centroid_x+5] = [0,0,255]
+
         cv.imshow('map', self.map)
         # cv.imwrite(f"dataviz/map/map-{iterator}.png", self.map)
 
@@ -149,18 +161,22 @@ class SLAM:
 
         self.last_frame = curr_frame
 
-    def calculate_centroid(self):
+    def calculate_centroid(self, iterator):
         x_sum = 0
         y_sum = 0
         count = 0
         for i in self.frontier_points:
-            if i[1][1] < 400:
+            if iterator<3:
+                # if i[1][1] > 250:
+                x_sum += i[1][1]
+                y_sum += i[1][0]
+                count += 1
+            else:
                 x_sum += i[1][1]
                 y_sum += i[1][0]
                 count += 1
         # x = int(sum(p[1][1] for p in self.frontier_points)/len(self.frontier_points))
         # y = int(sum(p[1][0] for p in self.frontier_points)/len(self.frontier_points))
-        print(int(x_sum/count), int(y_sum/count))
         return (int(x_sum/count),int(y_sum/count))
 
     def _find_adjacents(self, point, tMap):
@@ -190,6 +206,7 @@ class SLAM:
         return hasUnexploredNeighbour and hasOpenspaceNeighbour
 
     def detect_frontiers(self):
+        self.frontier_points = []
         tMap = []
         for row in range(self.map.shape[0]):
             tempRow = []
